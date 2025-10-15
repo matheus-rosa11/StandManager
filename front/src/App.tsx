@@ -1,28 +1,35 @@
 import { NavLink, Route, Routes } from 'react-router-dom';
+import LanguageSelector from './components/LanguageSelector';
+import { useTranslation } from './i18n';
 import CashierDashboard from './pages/CashierDashboard';
 import CustomerOrder from './pages/CustomerOrder';
 import Home from './pages/Home';
 import VolunteerBoard from './pages/VolunteerBoard';
 
 const App = () => {
+  const { t } = useTranslation();
+
   return (
     <div className="app-shell">
       <header className="app-header">
-        <div className="brand">Stand Manager</div>
-        <nav>
-          <NavLink to="/" end>
-            Início
-          </NavLink>
-          <NavLink to="/volunteers">
-            Pedidos Ativos
-          </NavLink>
-          <NavLink to="/cashier">
-            Caixa
-          </NavLink>
-          <NavLink to="/self-service">
-            Autoatendimento
-          </NavLink>
-        </nav>
+        <div className="brand">{t('app.brand')}</div>
+        <div className="header-actions">
+          <nav>
+            <NavLink to="/" end>
+              {t('nav.home')}
+            </NavLink>
+            <NavLink to="/volunteers">
+              {t('nav.volunteers')}
+            </NavLink>
+            <NavLink to="/cashier">
+              {t('nav.cashier')}
+            </NavLink>
+            <NavLink to="/self-service">
+              {t('nav.selfService')}
+            </NavLink>
+          </nav>
+          <LanguageSelector />
+        </div>
       </header>
       <main className="app-content">
         <Routes>
@@ -33,7 +40,7 @@ const App = () => {
         </Routes>
       </main>
       <footer className="app-footer">
-        <span>Projeto comunitário - Gerenciador de pedidos de pastel</span>
+        <span>{t('footer.communityProject')}</span>
       </footer>
     </div>
   );
