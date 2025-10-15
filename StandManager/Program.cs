@@ -1,3 +1,11 @@
+using System.Globalization;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.EntityFrameworkCore;
+using StandManager.Application.Orders;
+using StandManager.Application.Orders.Services;
+using StandManager.Application.PastelFlavors;
+using StandManager.Application.PastelFlavors.Services;
+using StandManager.Data;
 
 namespace StandManager
 {
@@ -7,14 +15,44 @@ namespace StandManager
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+            builder.Services.AddLocalization(options => options.ResourcesPath = "Resources");
 
-            builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+            builder.Services
+                .AddControllers()
+                .AddDataAnnotationsLocalization();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddDbContext<StandManagerDbContext>(options =>
+                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddScoped<IPastelFlavorService, PastelFlavorService>();
+            builder.Services.AddScoped<IOrderWorkflowService, OrderWorkflowService>();
+            builder.Services.AddScoped<IOrderService, OrderService>();
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Default", policy =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                });
+            });
+
+            var supportedCultures = new[] { "en-US", "pt-BR" };
+            builder.Services.Configure<RequestLocalizationOptions>(options =>
+            {
+                options.SetDefaultCulture(supportedCultures[0]);
+                options.AddSupportedCultures(supportedCultures);
+                options.AddSupportedUICultures(supportedCultures);
+            });
+
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<StandManagerDbContext>();
+                dbContext.Database.Migrate();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -23,10 +61,12 @@ namespace StandManager
                 app.UseSwaggerUI();
             }
 
+            app.UseRequestLocalization();
             app.UseHttpsRedirection();
 
-            app.UseAuthorization();
+            app.UseCors("Default");
 
+            app.UseAuthorization();
 
             app.MapControllers();
 
