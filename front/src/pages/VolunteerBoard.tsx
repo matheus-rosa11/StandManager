@@ -1,13 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 import { advanceOrderItemStatus, fetchActiveOrders } from '../api/orders';
 import { HttpError } from '../api/client';
+import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
-import { ORDER_STATUS_LABELS, describeWorkflowProgress, getStatusClass } from '../utils/orderStatus';
+import { ORDER_STATUS_LABEL_KEYS, describeWorkflowProgress, getStatusClass } from '../utils/orderStatus';
 
 const POLLING_INTERVAL_MS = 5000;
 
 const VolunteerBoard = () => {
   const loader = useCallback((signal: AbortSignal) => fetchActiveOrders(signal), []);
+  const { t } = useTranslation();
+  const { language } = useI18n();
   const { data: orderGroups, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, []);
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
@@ -24,13 +27,13 @@ const VolunteerBoard = () => {
       setFeedbackMessage(null);
       setUpdatingItemId(itemId);
       await advanceOrderItemStatus(orderId, itemId);
-      setFeedbackMessage('Pedido atualizado com sucesso.');
+      setFeedbackMessage(t('volunteer.success'));
       refresh();
     } catch (err) {
       if (err instanceof HttpError) {
         setFeedbackMessage(err.detail ?? err.message);
       } else {
-        setFeedbackMessage('Não foi possível atualizar o pedido.');
+        setFeedbackMessage(t('volunteer.genericError'));
       }
     } finally {
       setUpdatingItemId(null);
@@ -52,21 +55,21 @@ const VolunteerBoard = () => {
   return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-        <h1>Painel dos voluntários</h1>
-        <span style={{ color: 'var(--color-muted)' }}>
-          Itens pendentes: <strong>{totalPendingItems}</strong>
+        <h1>{t('volunteer.title')}</h1>
+        <span style={{ color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+          {t('volunteer.pendingItems')}: <strong>{totalPendingItems}</strong>
         </span>
         <button className="button" style={{ alignSelf: 'flex-start' }} onClick={refresh} disabled={loading}>
-          Atualizar agora
+          {t('volunteer.refresh')}
         </button>
         {feedbackMessage && <p style={{ color: 'var(--color-muted)' }}>{feedbackMessage}</p>}
       </header>
 
-      {loading && !orderGroups && <p>Carregando pedidos em andamento...</p>}
-      {error && <p style={{ color: '#c0392b' }}>Erro ao carregar pedidos: {error.message}</p>}
+      {loading && !orderGroups && <p>{t('volunteer.loading')}</p>}
+      {error && <p style={{ color: '#c0392b' }}>{t('volunteer.error', { message: error.message })}</p>}
 
       {groupedOrders.length === 0 && !loading ? (
-        <p>Não há pedidos pendentes no momento. 🎉</p>
+        <p>{t('volunteer.empty')}</p>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {groupedOrders.map((group) => {
@@ -93,11 +96,11 @@ const VolunteerBoard = () => {
                 >
                   <div>
                     <h2>{group.customerName}</h2>
-                    <small style={{ color: 'var(--color-muted)' }}>Sessão: {group.customerSessionId}</small>
+                    <small style={{ color: 'var(--color-muted)' }}>{t('volunteer.session', { sessionId: group.customerSessionId })}</small>
                   </div>
                   <div>
                     <span className="status-badge status-pending">
-                      {pendingCount} {pendingCount === 1 ? 'pastel' : 'pastéis'}
+                      {t('volunteer.pendingPastels', { count: pendingCount })}
                     </span>
                   </div>
                 </header>
@@ -107,9 +110,11 @@ const VolunteerBoard = () => {
                     {group.orders.map((order) => (
                       <section key={order.orderId} className="card" style={{ border: '1px dashed var(--color-border)' }}>
                         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong>Pedido #{order.orderId.slice(0, 8)}</strong>
+                          <strong>{t('volunteer.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
                           <small style={{ color: 'var(--color-muted)' }}>
-                            Recebido em {new Date(order.createdAt).toLocaleTimeString('pt-BR')}
+                            {t('volunteer.receivedAt', {
+                              time: new Date(order.createdAt).toLocaleTimeString(language)
+                            })}
                           </small>
                         </header>
                         <ul style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
@@ -118,6 +123,7 @@ const VolunteerBoard = () => {
                           ).map(({ item, index }) => {
                             const unitNumber = index + 1;
                             const itemKey = `${item.itemId}-${unitNumber}`;
+                            const progress = describeWorkflowProgress(item.status);
                             return (
                               <li
                                 key={itemKey}
@@ -132,16 +138,16 @@ const VolunteerBoard = () => {
                                   <div style={{ fontWeight: 600 }}>{item.flavorName}</div>
                                   {item.quantity > 1 && (
                                     <small style={{ color: 'var(--color-muted)' }}>
-                                      Unidade {unitNumber} de {item.quantity}
+                                      {t('volunteer.unitLabel', { unit: unitNumber, total: item.quantity })}
                                     </small>
                                   )}
                                 </div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                                   <span className={`status-badge ${getStatusClass(item.status)}`}>
-                                    {ORDER_STATUS_LABELS[item.status]}
+                                    {t(ORDER_STATUS_LABEL_KEYS[item.status])}
                                   </span>
                                   <small style={{ color: 'var(--color-muted)' }}>
-                                    {describeWorkflowProgress(item.status)}
+                                    {t(progress.key, progress.params)}
                                   </small>
                                 </div>
                                 <button
@@ -149,7 +155,7 @@ const VolunteerBoard = () => {
                                   onClick={() => handleAdvance(order.orderId, item.itemId)}
                                   disabled={item.status === 'Completed' || updatingItemId === item.itemId}
                                 >
-                                  {item.status === 'Completed' ? 'Concluído' : 'Avançar etapa'}
+                                  {item.status === 'Completed' ? t('volunteer.completed') : t('volunteer.advance')}
                                 </button>
                               </li>
                             );

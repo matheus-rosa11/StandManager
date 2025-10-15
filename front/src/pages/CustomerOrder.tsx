@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
+import { useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 
 const POLLING_INTERVAL_MS = 6000;
@@ -17,6 +18,7 @@ const CustomerOrder = () => {
   const [cart, setCart] = useState<CartMap>({});
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     const storedSessionId = localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
@@ -43,7 +45,7 @@ const CustomerOrder = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isFormValid) {
-      setMessage('Escolha seus sabores e informe seu nome para finalizar.');
+      setMessage(t('customerOrder.validation'));
       return;
     }
 
@@ -57,7 +59,7 @@ const CustomerOrder = () => {
       };
 
       const result = await createOrder(payload);
-      setMessage('Pedido enviado! Você receberá uma notificação quando estiver pronto.');
+      setMessage(t('customerOrder.success'));
       setCart({});
       setCustomerName('');
       const resolvedSessionId = result.customerSessionId ?? sessionId;
@@ -71,7 +73,7 @@ const CustomerOrder = () => {
         const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
         setMessage(validationMessage || err.detail || err.message);
       } else {
-        setMessage('Não foi possível registrar seu pedido. Tente novamente.');
+        setMessage(t('customerOrder.failure'));
       }
     } finally {
       setIsSubmitting(false);
@@ -81,42 +83,38 @@ const CustomerOrder = () => {
   return (
     <section className="card" style={{ display: 'grid', gap: '1.5rem' }}>
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-        <h1>Peça seu pastel</h1>
-        <p style={{ color: 'var(--color-muted)' }}>
-          Escolha os sabores disponíveis em tempo real e finalize seu pedido. Você será avisado quando estiver pronto! 😊
-        </p>
+        <h1>{t('customerOrder.title')}</h1>
+        <p style={{ color: 'var(--color-muted)' }}>{t('customerOrder.subtitle')}</p>
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
         <div>
           <label htmlFor="customerName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-            Seu nome
+            {t('customerOrder.nameLabel')}
           </label>
           <input
             id="customerName"
             type="text"
-            placeholder="Como devemos chamar você?"
+            placeholder={t('customerOrder.namePlaceholder')}
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
           />
         </div>
 
         {sessionId && (
-          <p style={{ color: 'var(--color-muted)' }}>
-            Continuando pedidos para a sessão <strong>{sessionId}</strong>.
-          </p>
+          <p style={{ color: 'var(--color-muted)' }}>{t('customerOrder.sessionMessage', { sessionId })}</p>
         )}
 
         <div style={{ display: 'grid', gap: '1rem' }}>
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Sabores disponíveis</h2>
+            <h2>{t('customerOrder.availableFlavors')}</h2>
             <button type="button" className="button" onClick={refresh} disabled={loading}>
-              Atualizar lista
+              {t('customerOrder.refresh')}
             </button>
           </header>
 
-          {loading && !flavors && <p>Carregando sabores deliciosos...</p>}
-          {error && <p style={{ color: '#c0392b' }}>Não foi possível carregar os sabores: {error.message}</p>}
+          {loading && !flavors && <p>{t('customerOrder.loading')}</p>}
+          {error && <p style={{ color: '#c0392b' }}>{t('customerOrder.error', { message: error.message })}</p>}
 
           <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
             {availableFlavors.map((flavor) => {
@@ -134,7 +132,7 @@ const CustomerOrder = () => {
                   <strong>{flavor.name}</strong>
                   {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
                   <span style={{ color: 'var(--color-muted)', marginTop: '0.5rem' }}>
-                    Disponíveis: {flavor.availableQuantity}
+                    {t('customerOrder.inStock', { quantity: flavor.availableQuantity })}
                   </span>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
                     <button
@@ -162,11 +160,9 @@ const CustomerOrder = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong>Itens no carrinho:</strong> {totalItems}
-          </div>
+          <div>{t('customerOrder.itemsInCart', { count: totalItems })}</div>
           <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
-            {isSubmitting ? 'Enviando...' : 'Finalizar pedido'}
+            {isSubmitting ? t('customerOrder.submitting') : t('customerOrder.submit')}
           </button>
         </div>
 

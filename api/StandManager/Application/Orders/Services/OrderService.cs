@@ -122,12 +122,17 @@ public sealed class OrderService : IOrderService
 
             foreach (var item in group.Items)
             {
-                order.Items.Add(new OrderItem
+                var normalizedNotes = item.Notes?.Trim();
+
+                for (var index = 0; index < item.Quantity; index++)
                 {
-                    PastelFlavorId = item.PastelFlavorId,
-                    Quantity = item.Quantity,
-                    Notes = item.Notes?.Trim()
-                });
+                    order.Items.Add(new OrderItem
+                    {
+                        PastelFlavorId = item.PastelFlavorId,
+                        Quantity = 1,
+                        Notes = normalizedNotes
+                    });
+                }
             }
         }
 

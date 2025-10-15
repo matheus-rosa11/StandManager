@@ -1,3 +1,5 @@
+import { getCurrentLanguage, translate } from '../i18n/translator';
+
 export interface HttpErrorDetail {
   title: string;
   status: number;
@@ -30,7 +32,7 @@ export async function parseResponse<TResponse>(response: Response): Promise<TRes
       // Ignore parsing errors
     }
 
-    const message = errorBody?.title ?? `Erro ao comunicar com a API (${response.status})`;
+    const message = errorBody?.title ?? translate('api.errorDefault', { status: response.status });
     throw new HttpError(message, response.status, errorBody?.detail, errorBody?.errors);
   }
 
@@ -61,6 +63,7 @@ export async function request<TResponse>(path: string, init?: RequestInit): Prom
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       'Content-Type': 'application/json',
+      'Accept-Language': getCurrentLanguage(),
       ...(init?.headers ?? {})
     },
     ...init
