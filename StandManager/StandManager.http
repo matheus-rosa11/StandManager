@@ -1,6 +1,37 @@
 @StandManager_HostAddress = http://localhost:5102
 
-GET {{StandManager_HostAddress}}/weatherforecast/
+### Listar sabores de pastel
+GET {{StandManager_HostAddress}}/api/pastelflavors
 Accept: application/json
 
-###
+### Criar um sabor
+POST {{StandManager_HostAddress}}/api/pastelflavors
+Content-Type: application/json
+
+{
+  "name": "Queijo",
+  "description": "Pastel de queijo tradicional",
+  "imageUrl": "https://example.com/queijo.jpg",
+  "availableQuantity": 50
+}
+
+### Registrar pedido
+POST {{StandManager_HostAddress}}/api/orders
+Content-Type: application/json
+
+{
+  "customerName": "Maria Silva",
+  "items": [
+    {
+      "pastelFlavorId": "00000000-0000-0000-0000-000000000000",
+      "quantity": 2
+    }
+  ]
+}
+
+### Avançar item do pedido
+POST {{StandManager_HostAddress}}/api/orders/{orderId}/items/{itemId}/advance
+Content-Type: application/json
+
+{
+}

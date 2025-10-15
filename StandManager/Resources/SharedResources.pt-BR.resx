@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="http://www.w3.org/2001/XMLSchema" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="errors.order.customer_name_required" xml:space="preserve">
+    <value>O nome do cliente é obrigatório.</value>
+  </data>
+  <data name="errors.order.customer_session_not_found" xml:space="preserve">
+    <value>A sessão do cliente informada não foi encontrada.</value>
+  </data>
+  <data name="errors.flavor.name_exists" xml:space="preserve">
+    <value>Já existe um sabor de pastel com esse nome.</value>
+  </data>
+  <data name="errors.flavor.not_found" xml:space="preserve">
+    <value>O sabor de pastel solicitado não foi encontrado.</value>
+  </data>
+  <data name="errors.flavor.out_of_stock" xml:space="preserve">
+    <value>O sabor "{0}" não possui quantidade disponível suficiente.</value>
+  </data>
+  <data name="errors.order.invalid_status_transition" xml:space="preserve">
+    <value>A mudança de status solicitada não é permitida.</value>
+  </data>
+  <data name="errors.order.item_already_final" xml:space="preserve">
+    <value>O item do pedido já está na etapa final.</value>
+  </data>
+  <data name="errors.order.item_completed" xml:space="preserve">
+    <value>O item do pedido já foi concluído.</value>
+  </data>
+  <data name="errors.order.item_not_found" xml:space="preserve">
+    <value>O item do pedido solicitado não foi encontrado.</value>
+  </data>
+  <data name="errors.order.must_have_items" xml:space="preserve">
+    <value>O pedido deve conter ao menos um sabor de pastel.</value>
+  </data>
+</root>
