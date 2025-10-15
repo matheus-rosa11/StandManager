@@ -1,4 +1,7 @@
 
+using Microsoft.EntityFrameworkCore;
+using StandManager.Data;
+
 namespace StandManager
 {
     public class Program
@@ -7,14 +10,28 @@ namespace StandManager
         {
             var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
-
             builder.Services.AddControllers();
-            // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();
 
+            builder.Services.AddDbContext<StandManagerDbContext>(options =>
+                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("Default", policy =>
+                {
+                    policy.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod();
+                });
+            });
+
             var app = builder.Build();
+
+            using (var scope = app.Services.CreateScope())
+            {
+                var dbContext = scope.ServiceProvider.GetRequiredService<StandManagerDbContext>();
+                dbContext.Database.Migrate();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
@@ -25,8 +42,9 @@ namespace StandManager
 
             app.UseHttpsRedirection();
 
-            app.UseAuthorization();
+            app.UseCors("Default");
 
+            app.UseAuthorization();
 
             app.MapControllers();
 
