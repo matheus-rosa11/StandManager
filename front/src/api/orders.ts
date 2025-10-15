@@ -1,4 +1,4 @@
-import { request } from './client';
+import { API_BASE_URL, parseResponse, request } from './client';
 import { OrderItemStatus } from '../utils/orderStatus';
 
 export interface OrderItemSummary {
@@ -52,12 +52,25 @@ export function fetchActiveOrders(signal?: AbortSignal): Promise<ActiveOrderGrou
   return request<ActiveOrderGroup[]>('/api/Orders/active', { signal });
 }
 
-export function createOrder(payload: CreateOrderInput, signal?: AbortSignal): Promise<OrderCreatedResponse> {
-  return request<OrderCreatedResponse>('/api/Orders', {
+export interface CreateOrderResult {
+  data?: OrderCreatedResponse;
+  customerSessionId?: string;
+}
+
+export async function createOrder(payload: CreateOrderInput, signal?: AbortSignal): Promise<CreateOrderResult> {
+  const response = await fetch(`${API_BASE_URL}/api/Orders`, {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
     body: JSON.stringify(payload),
     signal
   });
+
+  const data = await parseResponse<OrderCreatedResponse | undefined>(response);
+  const customerSessionId = response.headers.get('x-customer-session-id') ?? undefined;
+
+  return { data: data ?? undefined, customerSessionId: customerSessionId ?? data?.customerSessionId };
 }
 
 export function advanceOrderItemStatus(

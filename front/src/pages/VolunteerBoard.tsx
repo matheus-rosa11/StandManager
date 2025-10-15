@@ -72,7 +72,12 @@ const VolunteerBoard = () => {
           {groupedOrders.map((group) => {
             const isExpanded = expandedGroup === group.customerSessionId;
             const pendingCount = group.orders.reduce((acc, order) => {
-              return acc + order.items.filter((item) => item.status !== 'Completed').length;
+              return (
+                acc +
+                order.items
+                  .filter((item) => item.status !== 'Completed')
+                  .reduce((sum, item) => sum + item.quantity, 0)
+              );
             }, 0);
 
             return (
@@ -91,7 +96,9 @@ const VolunteerBoard = () => {
                     <small style={{ color: 'var(--color-muted)' }}>Sessão: {group.customerSessionId}</small>
                   </div>
                   <div>
-                    <span className="status-badge status-pending">{pendingCount} itens</span>
+                    <span className="status-badge status-pending">
+                      {pendingCount} {pendingCount === 1 ? 'pastel' : 'pastéis'}
+                    </span>
                   </div>
                 </header>
 
@@ -106,37 +113,47 @@ const VolunteerBoard = () => {
                           </small>
                         </header>
                         <ul style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>
-                          {order.items.map((item) => (
-                            <li
-                              key={item.itemId}
-                              style={{
-                                display: 'grid',
-                                gap: '0.5rem',
-                                gridTemplateColumns: '1.5fr 1fr auto',
-                                alignItems: 'center'
-                              }}
-                            >
-                              <div>
-                                <div style={{ fontWeight: 600 }}>{item.flavorName}</div>
-                                <small style={{ color: 'var(--color-muted)' }}>Quantidade: {item.quantity}</small>
-                              </div>
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                <span className={`status-badge ${getStatusClass(item.status)}`}>
-                                  {ORDER_STATUS_LABELS[item.status]}
-                                </span>
-                                <small style={{ color: 'var(--color-muted)' }}>
-                                  {describeWorkflowProgress(item.status)}
-                                </small>
-                              </div>
-                              <button
-                                className="button"
-                                onClick={() => handleAdvance(order.orderId, item.itemId)}
-                                disabled={item.status === 'Completed' || updatingItemId === item.itemId}
+                          {order.items.flatMap((item) =>
+                            Array.from({ length: item.quantity }, (_, index) => ({ item, index }))
+                          ).map(({ item, index }) => {
+                            const unitNumber = index + 1;
+                            const itemKey = `${item.itemId}-${unitNumber}`;
+                            return (
+                              <li
+                                key={itemKey}
+                                style={{
+                                  display: 'grid',
+                                  gap: '0.5rem',
+                                  gridTemplateColumns: '1.5fr 1fr auto',
+                                  alignItems: 'center'
+                                }}
                               >
-                                {item.status === 'Completed' ? 'Concluído' : 'Avançar etapa'}
-                              </button>
-                            </li>
-                          ))}
+                                <div>
+                                  <div style={{ fontWeight: 600 }}>{item.flavorName}</div>
+                                  {item.quantity > 1 && (
+                                    <small style={{ color: 'var(--color-muted)' }}>
+                                      Unidade {unitNumber} de {item.quantity}
+                                    </small>
+                                  )}
+                                </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                                  <span className={`status-badge ${getStatusClass(item.status)}`}>
+                                    {ORDER_STATUS_LABELS[item.status]}
+                                  </span>
+                                  <small style={{ color: 'var(--color-muted)' }}>
+                                    {describeWorkflowProgress(item.status)}
+                                  </small>
+                                </div>
+                                <button
+                                  className="button"
+                                  onClick={() => handleAdvance(order.orderId, item.itemId)}
+                                  disabled={item.status === 'Completed' || updatingItemId === item.itemId}
+                                >
+                                  {item.status === 'Completed' ? 'Concluído' : 'Avançar etapa'}
+                                </button>
+                              </li>
+                            );
+                          })}
                         </ul>
                       </section>
                     ))}

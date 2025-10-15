@@ -6,6 +6,7 @@ using StandManager.Application.Orders.Services;
 using StandManager.Application.PastelFlavors;
 using StandManager.Application.PastelFlavors.Services;
 using StandManager.Data;
+using System.Text.Json.Serialization;
 
 namespace StandManager
 {
@@ -19,6 +20,10 @@ namespace StandManager
 
             builder.Services
                 .AddControllers()
+                .AddJsonOptions(options =>
+                {
+                    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+                })
                 .AddDataAnnotationsLocalization();
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen();

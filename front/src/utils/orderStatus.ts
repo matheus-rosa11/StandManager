@@ -10,11 +10,24 @@ export const ORDER_STATUS_LABELS: Record<OrderItemStatus, string> = {
   Completed: 'Entregue'
 };
 
+const STATUS_CLASS_MAP: Record<OrderItemStatus, string> = {
+  Pending: 'status-pending',
+  Frying: 'status-frying',
+  Packaging: 'status-packaging',
+  ReadyForPickup: 'status-readyforpickup',
+  Completed: 'status-completed'
+};
+
 export function getStatusClass(status: OrderItemStatus): string {
-  return `status-${status}`;
+  return STATUS_CLASS_MAP[status] ?? 'status-pending';
 }
 
 export function describeWorkflowProgress(status: OrderItemStatus): string {
-  const step = ORDER_WORKFLOW.indexOf(status) + 1;
+  const stepIndex = ORDER_WORKFLOW.indexOf(status);
+  if (stepIndex === -1) {
+    return 'Etapa desconhecida';
+  }
+
+  const step = stepIndex + 1;
   return `Etapa ${step} de ${ORDER_WORKFLOW.length}`;
 }

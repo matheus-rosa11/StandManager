@@ -60,8 +60,11 @@ const CustomerOrder = () => {
       setMessage('Pedido enviado! Você receberá uma notificação quando estiver pronto.');
       setCart({});
       setCustomerName('');
-      setSessionId(result.customerSessionId);
-      localStorage.setItem(SESSION_STORAGE_KEY, result.customerSessionId);
+      const resolvedSessionId = result.customerSessionId ?? sessionId;
+      if (resolvedSessionId) {
+        setSessionId(resolvedSessionId);
+        localStorage.setItem(SESSION_STORAGE_KEY, resolvedSessionId);
+      }
       refresh();
     } catch (err) {
       if (err instanceof HttpError) {

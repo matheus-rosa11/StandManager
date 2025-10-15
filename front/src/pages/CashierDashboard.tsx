@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useMemo, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
@@ -15,6 +15,7 @@ const CashierDashboard = () => {
   const [cart, setCart] = useState<CartMap>({});
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const availableFlavors = useMemo(() => flavors ?? [], [flavors]);
 
@@ -50,7 +51,8 @@ const CashierDashboard = () => {
       };
 
       await createOrder(payload);
-      setFeedback('Pedido registrado com sucesso!');
+      setShowSuccessModal(true);
+      setFeedback(null);
       setCustomerName('');
       setCart({});
       refresh();
@@ -66,8 +68,27 @@ const CashierDashboard = () => {
     }
   };
 
+  useEffect(() => {
+    if (!showSuccessModal) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => setShowSuccessModal(false), 2000);
+    return () => window.clearTimeout(timer);
+  }, [showSuccessModal]);
+
   return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-icon modal-icon-success">
+              <span>✓</span>
+            </div>
+            <strong>Pedido registrado com sucesso!</strong>
+          </div>
+        </div>
+      )}
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
         <h1>Registro de pedidos - Caixa</h1>
         <p style={{ color: 'var(--color-muted)' }}>

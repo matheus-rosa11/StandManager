@@ -38,12 +38,26 @@ public sealed class PastelFlavorService : IPastelFlavorService
         CancellationToken cancellationToken)
     {
         var normalizedName = name.Trim();
-        var exists = await _dbContext.PastelFlavors
-            .AnyAsync(flavor => flavor.Name == normalizedName, cancellationToken);
+        var existingFlavor = await _dbContext.PastelFlavors
+            .FirstOrDefaultAsync(flavor => flavor.Name == normalizedName, cancellationToken);
 
-        if (exists)
+        if (existingFlavor is not null)
         {
-            return OperationResult<PastelFlavor>.Failure(new OperationError(ErrorCodes.FlavorNameExists, "Name"));
+            existingFlavor.AvailableQuantity += availableQuantity;
+
+            if (!string.IsNullOrWhiteSpace(description))
+            {
+                existingFlavor.Description = description.Trim();
+            }
+
+            if (!string.IsNullOrWhiteSpace(imageUrl))
+            {
+                existingFlavor.ImageUrl = imageUrl;
+            }
+
+            await _dbContext.SaveChangesAsync(cancellationToken);
+
+            return OperationResult<PastelFlavor>.Success(existingFlavor);
         }
 
         var flavor = new PastelFlavor
