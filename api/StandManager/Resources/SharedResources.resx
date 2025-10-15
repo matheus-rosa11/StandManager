@@ -57,33 +57,48 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="errors.order.customer_name_required" xml:space="preserve">
-    <value>O nome do cliente é obrigatório.</value>
+    <value>Customer name is required.</value>
   </data>
   <data name="errors.order.customer_session_not_found" xml:space="preserve">
-    <value>A sessão do cliente informada não foi encontrada.</value>
+    <value>The specified customer session could not be found.</value>
   </data>
   <data name="errors.flavor.name_exists" xml:space="preserve">
-    <value>Já existe um sabor de pastel com esse nome.</value>
+    <value>A pastel flavor with this name already exists.</value>
   </data>
   <data name="errors.flavor.not_found" xml:space="preserve">
-    <value>O sabor de pastel solicitado não foi encontrado.</value>
+    <value>The requested pastel flavor could not be found.</value>
   </data>
   <data name="errors.flavor.out_of_stock" xml:space="preserve">
-    <value>O sabor "{0}" não possui quantidade disponível suficiente.</value>
+    <value>Flavor '{0}' is out of stock for the requested quantity.</value>
   </data>
   <data name="errors.order.invalid_status_transition" xml:space="preserve">
-    <value>A mudança de status solicitada não é permitida.</value>
+    <value>The requested status change is not allowed.</value>
   </data>
   <data name="errors.order.item_already_final" xml:space="preserve">
-    <value>O item do pedido já está na etapa final.</value>
+    <value>The order item is already at the final stage.</value>
   </data>
   <data name="errors.order.item_completed" xml:space="preserve">
-    <value>O item do pedido já foi concluído.</value>
+    <value>The order item has already been completed.</value>
   </data>
   <data name="errors.order.item_not_found" xml:space="preserve">
-    <value>O item do pedido solicitado não foi encontrado.</value>
+    <value>The requested order item could not be found.</value>
   </data>
   <data name="errors.order.must_have_items" xml:space="preserve">
-    <value>O pedido deve conter ao menos um sabor de pastel.</value>
+    <value>An order must contain at least one pastel flavor.</value>
+  </data>
+  <data name="ErrorRequestCancelled" xml:space="preserve">
+    <value>The request was cancelled by the client.</value>
+  </data>
+  <data name="ErrorConcurrencyConflict" xml:space="preserve">
+    <value>A concurrency conflict occurred while processing your request.</value>
+  </data>
+  <data name="ErrorDatabaseWrite" xml:space="preserve">
+    <value>An error occurred while persisting data.</value>
+  </data>
+  <data name="ErrorDatabaseUnavailable" xml:space="preserve">
+    <value>The database is currently unavailable. Please try again later.</value>
+  </data>
+  <data name="ErrorUnexpected" xml:space="preserve">
+    <value>An unexpected error occurred while processing your request.</value>
   </data>
 </root>
