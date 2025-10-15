@@ -6,7 +6,7 @@ namespace StandManager.Application.Common.Results;
 
 public class OperationResult
 {
-    private OperationResult(bool succeeded, IReadOnlyCollection<OperationError> errors)
+    protected OperationResult(bool succeeded, IReadOnlyCollection<OperationError> errors)
     {
         Succeeded = succeeded;
         Errors = errors;
