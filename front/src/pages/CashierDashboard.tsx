@@ -2,6 +2,7 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
+import { useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 
 const POLLING_INTERVAL_MS = 7000;
@@ -16,6 +17,7 @@ const CashierDashboard = () => {
   const [feedback, setFeedback] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { t } = useTranslation();
 
   const availableFlavors = useMemo(() => flavors ?? [], [flavors]);
 
@@ -38,7 +40,7 @@ const CashierDashboard = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isFormValid) {
-      setFeedback('Informe o nome do cliente e selecione pelo menos um pastel.');
+      setFeedback(t('cashier.validation'));
       return;
     }
 
@@ -61,7 +63,7 @@ const CashierDashboard = () => {
         const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
         setFeedback(validationMessage || err.detail || err.message);
       } else {
-        setFeedback('Não foi possível registrar o pedido. Tente novamente.');
+        setFeedback(t('cashier.failure'));
       }
     } finally {
       setIsSubmitting(false);
@@ -85,26 +87,24 @@ const CashierDashboard = () => {
             <div className="modal-icon modal-icon-success">
               <span>✓</span>
             </div>
-            <strong>Pedido registrado com sucesso!</strong>
+            <strong>{t('cashier.successModal')}</strong>
           </div>
         </div>
       )}
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
-        <h1>Registro de pedidos - Caixa</h1>
-        <p style={{ color: 'var(--color-muted)' }}>
-          Consulte o estoque atualizado e selecione rapidamente os sabores solicitados pelos participantes.
-        </p>
+        <h1>{t('cashier.title')}</h1>
+        <p style={{ color: 'var(--color-muted)' }}>{t('cashier.subtitle')}</p>
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
         <div>
           <label htmlFor="customerName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-            Nome do cliente
+            {t('cashier.nameLabel')}
           </label>
           <input
             id="customerName"
             type="text"
-            placeholder="Ex: Maria Silva"
+            placeholder={t('cashier.namePlaceholder')}
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
           />
@@ -112,14 +112,14 @@ const CashierDashboard = () => {
 
         <div style={{ display: 'grid', gap: '1rem' }}>
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Sabores disponíveis</h2>
+            <h2>{t('cashier.availableFlavors')}</h2>
             <button type="button" className="button" onClick={refresh} disabled={loading}>
-              Atualizar estoque
+              {t('cashier.refresh')}
             </button>
           </header>
 
-          {loading && !flavors && <p>Carregando sabores disponíveis...</p>}
-          {error && <p style={{ color: '#c0392b' }}>Erro ao consultar sabores: {error.message}</p>}
+          {loading && !flavors && <p>{t('cashier.loading')}</p>}
+          {error && <p style={{ color: '#c0392b' }}>{t('cashier.error', { message: error.message })}</p>}
 
           <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
             {availableFlavors.map((flavor) => {
@@ -140,7 +140,7 @@ const CashierDashboard = () => {
                     />
                   )}
                   <footer style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <span style={{ color: 'var(--color-muted)' }}>Em estoque: {flavor.availableQuantity}</span>
+                    <span style={{ color: 'var(--color-muted)' }}>{t('cashier.inStock', { quantity: flavor.availableQuantity })}</span>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                       <button
                         type="button"
@@ -168,11 +168,9 @@ const CashierDashboard = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>
-            <strong>Total de pastéis:</strong> {totalItems}
-          </div>
+          <div>{t('cashier.totalPastels', { count: totalItems })}</div>
           <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
-            {isSubmitting ? 'Registrando...' : 'Registrar pedido'}
+            {isSubmitting ? t('cashier.submitting') : t('cashier.submit')}
           </button>
         </div>
 
