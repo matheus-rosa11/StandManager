@@ -1,24 +1,53 @@
 # StandManager
 
-StandManager é uma API ASP.NET Core pensada para organizar os pedidos da barraca de pastel da igreja. Ela controla o estoque dos sabores disponíveis, permite que voluntários ou visitantes registrem pedidos e oferece uma visualização agrupada por pessoa para acompanhar cada etapa da preparação.
+StandManager agora é um monorepo que reúne a API ASP.NET Core e o portal em React/TypeScript responsável por orquestrar o fluxo completo da barraca de pastel da igreja. A plataforma permite registrar pedidos presencialmente (caixa), autoatendimento via QR Code e acompanhamento em tempo real das etapas pelos voluntários.
 
-## Recursos principais
+## Estrutura do repositório
 
-- Cadastro e gerenciamento de sabores de pastel, incluindo quantidade disponível e foto.
-- Registro de pedidos com múltiplos itens, descontando automaticamente o estoque.
-- Agrupamento dos pedidos por pessoa para facilitar a atuação dos voluntários.
-- Fluxo completo de status para cada item (Pendente → Fritando → Embalando → Pronto → Finalizado) com validação das transições.
-- Migrações e banco SQLite para armazenamento persistente.
-- Mensagens de erro totalmente localizadas (pt-BR e en-US) prontas para consumo pelo front-end.
+```
+.
+├── api/                # Solução ASP.NET Core (camadas, migrations, localization)
+│   └── StandManager    # Projeto Web API
+└── front/              # Portal React + Vite + TypeScript
+```
 
-## Arquitetura
+## Destaques da solução
 
-- **Application Layer**: concentra regras de negócio em serviços orientados a casos de uso, retornando resultados ricos em códigos de erro para facilitar o tratamento no front-end.
-- **Controllers**: finos, apenas orquestram requisições, convertem DTOs e traduzem os erros usando `IStringLocalizer`.
-- **Infraestrutura**: Entity Framework Core com SQLite, migrations automáticas e `DbContext` compartilhado via DI.
-- **Globalização**: pipeline configurado com culturas `en-US` e `pt-BR`, permitindo que o cliente defina o idioma através do cabeçalho `Accept-Language`.
+- **Fluxo de produção completo**: status Pendente → Fritando → Embalando → Pronto → Entregue, com transições validadas no backend.
+- **Voluntários em tempo real**: painel agrupa pedidos por sessão temporária do cliente e permite avançar cada item com um clique.
+- **Autoatendimento via QR Code**: clientes escolhem sabores com fotos, acompanham estoque disponível e mantêm a mesma sessão em pedidos futuros.
+- **Caixa otimizado**: painel rápido para registrar pedidos presenciais com atualização de estoque em tempo real.
+- **Tratamento de erros aprimorado**: controllers encapsulam as chamadas de serviço com `try/catch`, retornando `ProblemDetails` legíveis (mensagens localizadas) inclusive quando o banco de dados está indisponível.
 
-## Endpoints
+## Executando a API
+
+1. Instale o **.NET 8 SDK** e garanta que o SQLite esteja disponível no ambiente.
+2. Acesse a pasta da API:
+   ```bash
+   cd api
+   ```
+3. Restaure e execute:
+   ```bash
+   dotnet run --project StandManager/StandManager.csproj
+   ```
+4. Na primeira execução o banco `standmanager.db` é criado automaticamente e as migrações são aplicadas.
+5. Durante o desenvolvimento o Swagger fica exposto em `https://localhost:5001/swagger` (ou `http://localhost:5000/swagger` se HTTPS estiver desabilitado).
+
+## Executando o front-end
+
+1. Instale as dependências do portal:
+   ```bash
+   cd front
+   npm install
+   ```
+2. Configure o endpoint da API caso necessário copiando o arquivo `.env.example` para `.env` e ajustando `VITE_API_BASE_URL`.
+3. Inicie o servidor de desenvolvimento:
+   ```bash
+   npm run dev
+   ```
+4. Acesse `http://localhost:5173` para visualizar o painel (build baseado em Vite + React Router).
+
+## Endpoints principais da API
 
 | Método | Endpoint | Descrição |
 | ------ | -------- | --------- |
@@ -26,22 +55,12 @@ StandManager é uma API ASP.NET Core pensada para organizar os pedidos da barrac
 | `POST` | `/api/pastelflavors` | Cadastra um novo sabor. |
 | `PUT` | `/api/pastelflavors/{id}` | Atualiza um sabor existente. |
 | `PATCH` | `/api/pastelflavors/{id}/inventory` | Atualiza apenas o estoque disponível. |
-| `POST` | `/api/orders` | Cria um pedido associado a uma pessoa ou sessão existente. |
-| `GET` | `/api/orders/active` | Retorna os pedidos ativos agrupados por pessoa. |
+| `POST` | `/api/orders` | Cria um pedido associado a um cliente/sessão. |
+| `GET` | `/api/orders/active` | Retorna os pedidos ativos agrupados pela sessão temporária. |
 | `POST` | `/api/orders/{orderId}/items/{itemId}/advance` | Avança o status de um item do pedido. |
-
-## Como executar
-
-1. Certifique-se de ter o .NET 8 SDK instalado.
-2. Na primeira execução a aplicação cria o banco `standmanager.db` com base nas migrações existentes.
-3. Execute a API com:
-   ```bash
-   dotnet run --project StandManager/StandManager/StandManager.csproj
-   ```
-4. A documentação Swagger estará disponível em `https://localhost:5001/swagger` durante o desenvolvimento.
 
 ## Próximos passos sugeridos
 
-- Implementar autenticação/autorização para separar o acesso de voluntários e clientes.
-- Integrar notificações push ou e-mail quando um item estiver pronto.
-- Criar o front-end em React/TypeScript consumindo os endpoints acima.
+- Implementar autenticação/autorização para separar perfis (voluntário, caixa, visitante).
+- Integrar notificações push/SMS para avisar quando o pedido estiver pronto.
+- Adicionar dashboards administrativos (relatórios de estoque, tempo médio de preparo, etc.).

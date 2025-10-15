@@ -16,6 +16,22 @@ public abstract class LocalizedControllerBase : ControllerBase
         _localizer = localizer;
     }
 
+    protected IActionResult HandleException(Exception exception, string messageResourceKey, int statusCode, params object[] args)
+    {
+        var detail = exception.InnerException?.Message ?? exception.Message;
+
+        var localizationArgs = args is { Length: > 0 } ? args : Array.Empty<object>();
+
+        var problemDetails = new ProblemDetails
+        {
+            Status = statusCode,
+            Title = _localizer[messageResourceKey, localizationArgs],
+            Detail = detail
+        };
+
+        return StatusCode(statusCode, problemDetails);
+    }
+
     protected IActionResult Problem(OperationResult result, int statusCode = StatusCodes.Status400BadRequest)
     {
         foreach (var error in result.Errors)
