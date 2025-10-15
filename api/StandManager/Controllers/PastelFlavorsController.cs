@@ -75,7 +75,7 @@ public class PastelFlavorsController : LocalizedControllerBase
 
             var flavor = result.Value!;
             var response = new PastelFlavorResponse(flavor.Id, flavor.Name, flavor.Description, flavor.ImageUrl, flavor.AvailableQuantity);
-            return CreatedAtAction(nameof(GetAsync), new { id = flavor.Id }, response);
+            return Created("api/PastelFlavors", null);
         }
         catch (OperationCanceledException ex)
         {

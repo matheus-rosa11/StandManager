@@ -62,7 +62,7 @@ public class OrdersController : LocalizedControllerBase
                 payload.CustomerSessionId,
                 payload.Items.Select(i => new OrderItemSummary(i.OrderItemId, i.PastelFlavorId, i.Quantity, i.Status)).ToList());
 
-            return CreatedAtAction(nameof(GetActiveAsync), null, response);
+            return Created("api/Orders/active", null);
         }
         catch (OperationCanceledException ex)
         {

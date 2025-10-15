@@ -11,7 +11,7 @@ export const ORDER_STATUS_LABELS: Record<OrderItemStatus, string> = {
 };
 
 export function getStatusClass(status: OrderItemStatus): string {
-  return `status-${status.toLowerCase()}`;
+  return `status-${status}`;
 }
 
 export function describeWorkflowProgress(status: OrderItemStatus): string {
