@@ -24,7 +24,7 @@ namespace StandManager
             builder.Services.AddSwaggerGen();
 
             builder.Services.AddDbContext<StandManagerDbContext>(options =>
-                options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
+                options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddScoped<IPastelFlavorService, PastelFlavorService>();
             builder.Services.AddScoped<IOrderWorkflowService, OrderWorkflowService>();
