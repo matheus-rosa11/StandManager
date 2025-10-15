@@ -27,7 +27,7 @@ public class OrdersController : LocalizedControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(OrderCreatedResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateAsync([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
     {
         try
@@ -57,12 +57,11 @@ public class OrdersController : LocalizedControllerBase
             }
 
             var payload = result.Value!;
-            var response = new OrderCreatedResponse(
-                payload.OrderId,
-                payload.CustomerSessionId,
-                payload.Items.Select(i => new OrderItemSummary(i.OrderItemId, i.PastelFlavorId, i.Quantity, i.Status)).ToList());
+            Response.Headers["X-Customer-Session-Id"] = payload.CustomerSessionId.ToString();
 
-            return Created("api/Orders/active", null);
+            var location = Url.ActionLink(nameof(GetActiveAsync)) ?? "/api/Orders/active";
+
+            return Created(location, null);
         }
         catch (OperationCanceledException ex)
         {

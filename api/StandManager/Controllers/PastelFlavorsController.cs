@@ -52,7 +52,7 @@ public class PastelFlavorsController : LocalizedControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(PastelFlavorResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status201Created)]
     public async Task<IActionResult> CreateAsync([FromBody] CreatePastelFlavorRequest request, CancellationToken cancellationToken)
     {
         try
@@ -73,9 +73,8 @@ public class PastelFlavorsController : LocalizedControllerBase
                 return Problem(result);
             }
 
-            var flavor = result.Value!;
-            var response = new PastelFlavorResponse(flavor.Id, flavor.Name, flavor.Description, flavor.ImageUrl, flavor.AvailableQuantity);
-            return Created("api/PastelFlavors", null);
+            var location = Url.ActionLink(nameof(GetAsync)) ?? "/api/PastelFlavors";
+            return Created(location, null);
         }
         catch (OperationCanceledException ex)
         {
