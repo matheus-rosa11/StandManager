@@ -21,17 +21,32 @@ StandManager agora é um monorepo que reúne a API ASP.NET Core e o portal em Re
 
 ## Executando a API
 
-1. Instale o **.NET 8 SDK** e garanta que o SQLite esteja disponível no ambiente.
-2. Acesse a pasta da API:
+1. Instale o **.NET 8 SDK**.
+2. Suba uma instância do PostgreSQL (o repositório já traz um serviço pronto via Docker Compose):
+   ```bash
+   docker compose pull postgres
+   docker compose up -d postgres
+   ```
+   > O banco é exposto em `localhost:5432` com credenciais padrão `postgres`/`postgres`. Ajuste-as conforme necessário ou
+   > exporte variáveis de ambiente antes de subir o container.
+   >
+   > **Solução de problemas**: se o Docker Desktop acusar erro 500 ao baixar a imagem, reinicie o serviço do Docker e repita o
+   > `docker compose pull postgres`. Esse passo força o download pelo canal padrão antes de iniciar o container e costuma
+   > contornar instabilidades no daemon do Windows.
+3. Acesse a pasta da API:
    ```bash
    cd api
    ```
-3. Restaure e execute:
+4. Opcional: aplique as migrações manualmente antes de executar a API.
+   ```bash
+   dotnet ef database update --project StandManager/StandManager.csproj
+   ```
+   > Se preferir, a API também aplica as migrações automaticamente na primeira execução.
+5. Restaure e execute:
    ```bash
    dotnet run --project StandManager/StandManager.csproj
    ```
-4. Na primeira execução o banco `standmanager.db` é criado automaticamente e as migrações são aplicadas.
-5. Durante o desenvolvimento o Swagger fica exposto em `https://localhost:5001/swagger` (ou `http://localhost:5000/swagger` se HTTPS estiver desabilitado).
+6. Durante o desenvolvimento o Swagger fica exposto em `https://localhost:5001/swagger` (ou `http://localhost:5000/swagger` se HTTPS estiver desabilitado).
 
 ## Executando o front-end
 
