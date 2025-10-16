@@ -164,6 +164,7 @@ const CustomerOrder = () => {
               const isOutOfStock = flavor.availableQuantity === 0;
               return (
                 <article key={flavor.id} className="card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
+                  <strong>{flavor.name}</strong>
                   {flavor.imageUrl && (
                     <img
                       src={flavor.imageUrl}
