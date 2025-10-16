@@ -35,6 +35,7 @@ public sealed class PastelFlavorService : IPastelFlavorService
         string? description,
         string? imageUrl,
         int availableQuantity,
+        decimal price,
         CancellationToken cancellationToken)
     {
         var normalizedName = name.Trim();
@@ -44,6 +45,7 @@ public sealed class PastelFlavorService : IPastelFlavorService
         if (existingFlavor is not null)
         {
             existingFlavor.AvailableQuantity += availableQuantity;
+            existingFlavor.Price = price;
 
             if (!string.IsNullOrWhiteSpace(description))
             {
@@ -65,7 +67,8 @@ public sealed class PastelFlavorService : IPastelFlavorService
             Name = normalizedName,
             Description = description?.Trim(),
             ImageUrl = imageUrl,
-            AvailableQuantity = availableQuantity
+            AvailableQuantity = availableQuantity,
+            Price = price
         };
 
         _dbContext.PastelFlavors.Add(flavor);
@@ -79,6 +82,7 @@ public sealed class PastelFlavorService : IPastelFlavorService
         string name,
         string? description,
         string? imageUrl,
+        decimal price,
         CancellationToken cancellationToken)
     {
         var flavor = await _dbContext.PastelFlavors.FirstOrDefaultAsync(f => f.Id == id, cancellationToken);
@@ -98,6 +102,7 @@ public sealed class PastelFlavorService : IPastelFlavorService
         flavor.Name = normalizedName;
         flavor.Description = description?.Trim();
         flavor.ImageUrl = imageUrl;
+        flavor.Price = price;
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 

@@ -6,6 +6,7 @@ export interface PastelFlavor {
   description?: string | null;
   imageUrl?: string | null;
   availableQuantity: number;
+  price: number;
 }
 
 export function fetchPastelFlavors(signal?: AbortSignal): Promise<PastelFlavor[]> {

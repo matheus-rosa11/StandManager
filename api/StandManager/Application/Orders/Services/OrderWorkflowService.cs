@@ -11,6 +11,7 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
         OrderItemStatus.Frying,
         OrderItemStatus.Packaging,
         OrderItemStatus.ReadyForPickup,
+        OrderItemStatus.OutForDelivery,
         OrderItemStatus.Completed
     };
 
@@ -33,7 +34,7 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
     }
 
     public bool IsFinalStatus(OrderItemStatus status)
-        => IndexOf(status) == OrderedStatuses.Count - 1;
+        => status == OrderItemStatus.Cancelled || IndexOf(status) == OrderedStatuses.Count - 1;
 
     private static int IndexOf(OrderItemStatus status)
     {

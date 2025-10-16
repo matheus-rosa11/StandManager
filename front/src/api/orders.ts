@@ -1,16 +1,23 @@
 import { API_BASE_URL, parseResponse, request } from './client';
 import { OrderItemStatus } from '../utils/orderStatus';
 
+export interface OrderStatusSnapshot {
+  status: OrderItemStatus;
+  changedAt: string;
+}
+
 export interface OrderItemSummary {
   orderItemId: string;
   pastelFlavorId: string;
   quantity: number;
   status: OrderItemStatus;
+  unitPrice: number;
 }
 
 export interface OrderCreatedResponse {
   orderId: string;
   customerSessionId: string;
+  totalAmount: number;
   items: OrderItemSummary[];
 }
 
@@ -19,6 +26,7 @@ export interface ActiveOrderItem {
   pastelFlavorId: string;
   flavorName: string;
   quantity: number;
+  unitPrice: number;
   status: OrderItemStatus;
   createdAt: string;
   lastUpdatedAt?: string | null;
@@ -27,6 +35,7 @@ export interface ActiveOrderItem {
 export interface ActiveOrder {
   orderId: string;
   createdAt: string;
+  totalAmount: number;
   items: ActiveOrderItem[];
 }
 
@@ -34,6 +43,48 @@ export interface ActiveOrderGroup {
   customerSessionId: string;
   customerName: string;
   orders: ActiveOrder[];
+}
+
+export interface CustomerOrderItem {
+  itemId: string;
+  pastelFlavorId: string;
+  flavorName: string;
+  quantity: number;
+  unitPrice: number;
+  status: OrderItemStatus;
+  createdAt: string;
+  lastUpdatedAt?: string | null;
+  history: OrderStatusSnapshot[];
+}
+
+export interface CustomerOrder {
+  orderId: string;
+  createdAt: string;
+  totalAmount: number;
+  isCancelable: boolean;
+  items: CustomerOrderItem[];
+}
+
+export interface OrderHistoryItem {
+  itemId: string;
+  pastelFlavorId: string;
+  flavorName: string;
+  quantity: number;
+  unitPrice: number;
+  history: OrderStatusSnapshot[];
+}
+
+export interface OrderHistoryOrder {
+  orderId: string;
+  createdAt: string;
+  totalAmount: number;
+  items: OrderHistoryItem[];
+}
+
+export interface OrderHistoryGroup {
+  customerSessionId: string;
+  customerName: string;
+  orders: OrderHistoryOrder[];
 }
 
 export interface CreateOrderItemInput {
@@ -84,4 +135,20 @@ export function advanceOrderItemStatus(
     body: JSON.stringify({ targetStatus }),
     signal
   });
+}
+
+export function fetchCustomerOrders(sessionId: string, signal?: AbortSignal): Promise<CustomerOrder[]> {
+  return request<CustomerOrder[]>(`/api/Orders/customer/${sessionId}`, { signal });
+}
+
+export function cancelOrder(orderId: string, customerSessionId: string, signal?: AbortSignal): Promise<void> {
+  return request<void>(`/api/Orders/${orderId}/cancel`, {
+    method: 'POST',
+    body: JSON.stringify({ customerSessionId }),
+    signal
+  });
+}
+
+export function fetchOrderHistory(signal?: AbortSignal): Promise<OrderHistoryGroup[]> {
+  return request<OrderHistoryGroup[]>('/api/Orders/history', { signal });
 }

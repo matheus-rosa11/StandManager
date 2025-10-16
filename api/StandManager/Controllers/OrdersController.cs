@@ -59,9 +59,17 @@ public class OrdersController : LocalizedControllerBase
             var payload = result.Value!;
             Response.Headers["X-Customer-Session-Id"] = payload.CustomerSessionId.ToString();
 
+            var response = new OrderCreatedResponse(
+                payload.OrderId,
+                payload.CustomerSessionId,
+                payload.TotalAmount,
+                payload.Items
+                    .Select(item => new OrderItemSummary(item.OrderItemId, item.PastelFlavorId, item.Quantity, item.Status, item.UnitPrice))
+                    .ToList());
+
             var location = Url.ActionLink(nameof(GetActiveAsync)) ?? "/api/Orders/active";
 
-            return Created(location, null);
+            return Created(location, response);
         }
         catch (OperationCanceledException ex)
         {
@@ -99,11 +107,13 @@ public class OrdersController : LocalizedControllerBase
                     group.Orders.Select(order => new ActiveOrderResponse(
                         order.OrderId,
                         order.CreatedAt,
+                        order.TotalAmount,
                         order.Items.Select(item => new ActiveOrderItemResponse(
                             item.OrderItemId,
                             item.PastelFlavorId,
                             item.FlavorName,
                             item.Quantity,
+                            item.UnitPrice,
                             item.Status,
                             item.CreatedAt,
                             item.LastUpdatedAt
@@ -151,6 +161,7 @@ public class OrdersController : LocalizedControllerBase
                 item.PastelFlavorId,
                 item.FlavorName,
                 item.Quantity,
+                item.UnitPrice,
                 item.Status,
                 item.CreatedAt,
                 item.LastUpdatedAt);
@@ -168,6 +179,148 @@ public class OrdersController : LocalizedControllerBase
         catch (DbUpdateException ex)
         {
             return HandleException(ex, "ErrorDatabaseWrite", StatusCodes.Status500InternalServerError);
+        }
+        catch (DbException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseUnavailable", StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "ErrorUnexpected", StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("customer/{sessionId:guid}")]
+    [ProducesResponseType(typeof(IEnumerable<CustomerOrderResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetByCustomerAsync(Guid sessionId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var orders = await _orderService.GetCustomerOrdersAsync(sessionId, cancellationToken);
+            var response = orders
+                .Select(order => new CustomerOrderResponse(
+                    order.OrderId,
+                    order.CreatedAt,
+                    order.TotalAmount,
+                    order.IsCancelable,
+                    order.Items
+                        .Select(item => new CustomerOrderItemResponse(
+                            item.OrderItemId,
+                            item.PastelFlavorId,
+                            item.FlavorName,
+                            item.Quantity,
+                            item.UnitPrice,
+                            item.Status,
+                            item.CreatedAt,
+                            item.LastUpdatedAt,
+                            item.History
+                                .Select(history => new OrderStatusSnapshotResponse(history.Status, history.ChangedAt))
+                                .ToList()
+                        ))
+                        .ToList()
+                ))
+                .ToList();
+
+            return Ok(response);
+        }
+        catch (OperationCanceledException ex)
+        {
+            return HandleException(ex, "ErrorRequestCancelled", StatusCodes.Status499ClientClosedRequest);
+        }
+        catch (DbException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseUnavailable", StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "ErrorUnexpected", StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpPost("{orderId:guid}/cancel")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    public async Task<IActionResult> CancelAsync(Guid orderId, [FromBody] CancelOrderRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            var result = await _orderService.CancelOrderAsync(orderId, request.CustomerSessionId, cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                var status = result.Errors.Any(e => e.Code == ErrorCodes.OrderNotFound)
+                    ? StatusCodes.Status404NotFound
+                    : StatusCodes.Status400BadRequest;
+
+                return Problem(result, status);
+            }
+
+            return NoContent();
+        }
+        catch (OperationCanceledException ex)
+        {
+            return HandleException(ex, "ErrorRequestCancelled", StatusCodes.Status499ClientClosedRequest);
+        }
+        catch (DbUpdateConcurrencyException ex)
+        {
+            return HandleException(ex, "ErrorConcurrencyConflict", StatusCodes.Status409Conflict);
+        }
+        catch (DbUpdateException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseWrite", StatusCodes.Status500InternalServerError);
+        }
+        catch (DbException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseUnavailable", StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "ErrorUnexpected", StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpGet("history")]
+    [ProducesResponseType(typeof(IEnumerable<OrderHistoryGroupResponse>), StatusCodes.Status200OK)]
+    public async Task<IActionResult> GetHistoryAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var history = await _orderService.GetOrderHistoryAsync(cancellationToken);
+            var response = history
+                .Select(group => new OrderHistoryGroupResponse(
+                    group.CustomerSessionId,
+                    group.CustomerName,
+                    group.Orders
+                        .Select(order => new OrderHistoryOrderResponse(
+                            order.OrderId,
+                            order.CreatedAt,
+                            order.TotalAmount,
+                            order.Items
+                                .Select(item => new OrderHistoryItemResponse(
+                                    item.OrderItemId,
+                                    item.PastelFlavorId,
+                                    item.FlavorName,
+                                    item.Quantity,
+                                    item.UnitPrice,
+                                    item.History
+                                        .Select(historyEntry => new OrderStatusSnapshotResponse(historyEntry.Status, historyEntry.ChangedAt))
+                                        .ToList()
+                                ))
+                                .ToList()
+                        ))
+                        .ToList()
+                ))
+                .ToList();
+
+            return Ok(response);
+        }
+        catch (OperationCanceledException ex)
+        {
+            return HandleException(ex, "ErrorRequestCancelled", StatusCodes.Status499ClientClosedRequest);
         }
         catch (DbException ex)
         {

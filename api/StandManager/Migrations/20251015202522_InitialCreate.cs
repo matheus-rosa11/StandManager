@@ -33,6 +33,7 @@ namespace StandManager.Migrations
                     Description = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     AvailableQuantity = table.Column<int>(type: "integer", nullable: false),
+                    Price = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -47,7 +48,8 @@ namespace StandManager.Migrations
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
                     CustomerSessionId = table.Column<Guid>(type: "uuid", nullable: false),
                     CustomerNameSnapshot = table.Column<string>(type: "text", nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    TotalAmount = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m)
                 },
                 constraints: table =>
                 {
@@ -69,6 +71,7 @@ namespace StandManager.Migrations
                     PastelFlavorId = table.Column<Guid>(type: "uuid", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
                     Status = table.Column<int>(type: "integer", nullable: false),
+                    UnitPrice = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m),
                     Notes = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
@@ -88,6 +91,26 @@ namespace StandManager.Migrations
                         principalTable: "PastelFlavors",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "OrderItemStatusHistories",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    OrderItemId = table.Column<Guid>(type: "uuid", nullable: false),
+                    Status = table.Column<int>(type: "integer", nullable: false),
+                    ChangedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_OrderItemStatusHistories", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_OrderItemStatusHistories_OrderItems_OrderItemId",
+                        column: x => x.OrderItemId,
+                        principalTable: "OrderItems",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -110,11 +133,19 @@ namespace StandManager.Migrations
                 table: "PastelFlavors",
                 column: "Name",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_OrderItemStatusHistories_OrderItemId_ChangedAt",
+                table: "OrderItemStatusHistories",
+                columns: new[] { "OrderItemId", "ChangedAt" });
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropTable(
+                name: "OrderItemStatusHistories");
+
             migrationBuilder.DropTable(
                 name: "OrderItems");
 

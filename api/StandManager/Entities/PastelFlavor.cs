@@ -20,6 +20,9 @@ public class PastelFlavor
     [Range(0, int.MaxValue)]
     public int AvailableQuantity { get; set; }
 
+    [Range(typeof(decimal), "0", "1000000")]
+    public decimal Price { get; set; }
+
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public ICollection<OrderItem> OrderItems { get; set; } = new HashSet<OrderItem>();

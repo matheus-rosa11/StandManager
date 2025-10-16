@@ -23,4 +23,10 @@ public interface IOrderService
         Guid orderItemId,
         OrderItemStatus? targetStatus,
         CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<CustomerOrderModel>> GetCustomerOrdersAsync(Guid customerSessionId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(CancellationToken cancellationToken);
+
+    Task<OperationResult> CancelOrderAsync(Guid orderId, Guid customerSessionId, CancellationToken cancellationToken);
 }

@@ -1,8 +1,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
-import { useTranslation } from '../i18n';
+import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 
 const POLLING_INTERVAL_MS = 6000;
@@ -19,6 +20,9 @@ const CustomerOrder = () => {
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useTranslation();
+  const { language } = useI18n();
+  const navigate = useNavigate();
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   useEffect(() => {
     const storedSessionId = localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
@@ -42,6 +46,21 @@ const CustomerOrder = () => {
   const totalItems = useMemo(() => Object.values(cart).reduce((acc, value) => acc + value, 0), [cart]);
   const isFormValid = customerName.trim().length > 0 && totalItems > 0;
 
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat(language, { style: 'currency', currency: 'BRL' }),
+    [language]
+  );
+
+  const totalAmount = useMemo(() => {
+    return Object.entries(cart).reduce((acc, [flavorId, quantity]) => {
+      const flavor = availableFlavors.find((item) => item.id === flavorId);
+      if (!flavor) {
+        return acc;
+      }
+      return acc + flavor.price * quantity;
+    }, 0);
+  }, [availableFlavors, cart]);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isFormValid) {
@@ -59,7 +78,7 @@ const CustomerOrder = () => {
       };
 
       const result = await createOrder(payload);
-      setMessage(t('customerOrder.success'));
+      setShowSuccessModal(true);
       setCart({});
       setCustomerName('');
       const resolvedSessionId = result.customerSessionId ?? sessionId;
@@ -80,8 +99,31 @@ const CustomerOrder = () => {
     }
   };
 
+  useEffect(() => {
+    if (!showSuccessModal) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setShowSuccessModal(false);
+      navigate('/self-service/orders', { replace: true });
+    }, 2200);
+
+    return () => window.clearTimeout(timer);
+  }, [navigate, showSuccessModal]);
+
   return (
     <section className="card" style={{ display: 'grid', gap: '1.5rem' }}>
+      {showSuccessModal && (
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-icon modal-icon-success">
+              <span>✓</span>
+            </div>
+            <strong>{t('customerOrder.success')}</strong>
+          </div>
+        </div>
+      )}
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <h1>{t('customerOrder.title')}</h1>
         <p style={{ color: 'var(--color-muted)' }}>{t('customerOrder.subtitle')}</p>
@@ -131,6 +173,9 @@ const CustomerOrder = () => {
                   )}
                   <strong>{flavor.name}</strong>
                   {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
+                  <span style={{ color: 'var(--color-muted)', marginTop: '0.25rem', fontWeight: 600 }}>
+                    {currencyFormatter.format(flavor.price)}
+                  </span>
                   <span style={{ color: 'var(--color-muted)', marginTop: '0.5rem' }}>
                     {t('customerOrder.inStock', { quantity: flavor.availableQuantity })}
                   </span>
@@ -160,7 +205,12 @@ const CustomerOrder = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>{t('customerOrder.itemsInCart', { count: totalItems })}</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span>{t('customerOrder.itemsInCart', { count: totalItems })}</span>
+            <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
+              {t('customerOrder.totalAmount', { value: currencyFormatter.format(totalAmount) })}
+            </small>
+          </div>
           <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
             {isSubmitting ? t('customerOrder.submitting') : t('customerOrder.submit')}
           </button>

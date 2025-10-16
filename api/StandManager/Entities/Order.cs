@@ -16,5 +16,8 @@ public class Order
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
+    [Range(typeof(decimal), "0", "1000000")]
+    public decimal TotalAmount { get; set; }
+
     public ICollection<OrderItem> Items { get; set; } = new HashSet<OrderItem>();
 }
