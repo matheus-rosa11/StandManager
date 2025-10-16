@@ -35,6 +35,7 @@ namespace StandManager.Data
                 {
                     // Upsert: atualiza campos que podem mudar no tempo
                     existing.Description = item.Description;
+                    existing.ImageUrl = item.ImageUrl;
                     existing.Price = item.Price;
                     existing.AvailableQuantity = item.AvailableQuantity;
                 }
