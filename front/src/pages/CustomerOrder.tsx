@@ -158,7 +158,7 @@ const CustomerOrder = () => {
           {loading && !flavors && <p>{t('customerOrder.loading')}</p>}
           {error && <p style={{ color: '#c0392b' }}>{t('customerOrder.error', { message: error.message })}</p>}
 
-          <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}>
+          <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
             {availableFlavors.map((flavor) => {
               const selectedQuantity = cart[flavor.id] ?? 0;
               const isOutOfStock = flavor.availableQuantity === 0;
