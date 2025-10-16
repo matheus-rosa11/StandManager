@@ -9,6 +9,7 @@ using Microsoft.Extensions.Localization;
 using StandManager.Application.Common.Errors;
 using StandManager.Application.PastelFlavors;
 using StandManager.DTOs;
+using StandManager.Entities;
 using StandManager.Localization;
 
 namespace StandManager.Controllers;
@@ -76,6 +77,62 @@ public class PastelFlavorsController : LocalizedControllerBase
 
             var location = Url.ActionLink(nameof(GetAsync)) ?? "/api/PastelFlavors";
             return Created(location, null);
+        }
+        catch (OperationCanceledException ex)
+        {
+            return HandleException(ex, "ErrorRequestCancelled", StatusCodes.Status499ClientClosedRequest);
+        }
+        catch (DbUpdateException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseWrite", StatusCodes.Status500InternalServerError);
+        }
+        catch (DbException ex)
+        {
+            return HandleException(ex, "ErrorDatabaseUnavailable", StatusCodes.Status503ServiceUnavailable);
+        }
+        catch (Exception ex)
+        {
+            return HandleException(ex, "ErrorUnexpected", StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    [HttpPost("batch")]
+    [ProducesResponseType(typeof(IEnumerable<PastelFlavorResponse>), StatusCodes.Status201Created)]
+    public async Task<IActionResult> CreateBatchAsync([FromBody] CreatePastelFlavorBatchRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+            {
+                return ValidationProblem(ModelState);
+            }
+
+            var items = request.Items
+                .Select(item => new PastelFlavorCreationModel(
+                    item.Name,
+                    item.Description,
+                    item.ImageUrl,
+                    item.AvailableQuantity,
+                    item.Price))
+                .ToList();
+
+            var result = await _pastelFlavorService.CreateBatchAsync(items, cancellationToken);
+
+            if (!result.Succeeded)
+            {
+                var status = result.Errors.Any(error => error.Code == ErrorCodes.FlavorNameExists)
+                    ? StatusCodes.Status409Conflict
+                    : StatusCodes.Status400BadRequest;
+
+                return Problem(result, status);
+            }
+
+            var response = (result.Value ?? Array.Empty<PastelFlavor>())
+                .Select(f => new PastelFlavorResponse(f.Id, f.Name, f.Description, f.ImageUrl, f.AvailableQuantity, f.Price))
+                .ToList();
+
+            var location = Url.ActionLink(nameof(GetAsync)) ?? "/api/PastelFlavors";
+            return Created(location, response);
         }
         catch (OperationCanceledException ex)
         {

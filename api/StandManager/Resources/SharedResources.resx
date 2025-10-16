@@ -65,6 +65,9 @@
   <data name="errors.flavor.name_exists" xml:space="preserve">
     <value>A pastel flavor with this name already exists.</value>
   </data>
+  <data name="errors.flavor.name_required" xml:space="preserve">
+    <value>A pastel flavor name is required.</value>
+  </data>
   <data name="errors.flavor.not_found" xml:space="preserve">
     <value>The requested pastel flavor could not be found.</value>
   </data>

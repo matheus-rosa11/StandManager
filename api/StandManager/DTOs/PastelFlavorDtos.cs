@@ -1,4 +1,6 @@
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Mvc;
 
 namespace StandManager.DTOs;
 
@@ -22,6 +24,14 @@ public class CreatePastelFlavorRequest
 
     [Range(typeof(decimal), "0", "1000000")]
     public decimal Price { get; init; }
+}
+
+public class CreatePastelFlavorBatchRequest
+{
+    [Required]
+    [MinLength(1)]
+    [ValidateComplexType]
+    public List<CreatePastelFlavorRequest> Items { get; init; } = new();
 }
 
 public class UpdatePastelFlavorRequest

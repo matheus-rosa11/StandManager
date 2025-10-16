@@ -5,6 +5,7 @@ import CashierDashboard from './pages/CashierDashboard';
 import CustomerOrder from './pages/CustomerOrder';
 import CustomerOrders from './pages/CustomerOrders';
 import Home from './pages/Home';
+import AdminPastelManager from './pages/AdminPastelManager';
 import VolunteerBoard from './pages/VolunteerBoard';
 import VolunteerHistory from './pages/VolunteerHistory';
 
@@ -35,6 +36,9 @@ const App = () => {
             <NavLink to="/self-service">
               {t('nav.selfService')}
             </NavLink>
+            <NavLink to="/admin/pasteis">
+              {t('nav.admin')}
+            </NavLink>
           </nav>
           <LanguageSelector />
         </div>
@@ -49,6 +53,7 @@ const App = () => {
           <Route path="/self-service" element={<CustomerOrder />} />
           <Route path="/self-service/orders" element={<CustomerOrders />} />
           <Route path="/my-orders" element={<CustomerOrders />} />
+          <Route path="/admin/pasteis" element={<AdminPastelManager />} />
         </Routes>
       </main>
       <footer className="app-footer">

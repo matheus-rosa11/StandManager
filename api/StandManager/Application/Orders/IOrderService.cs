@@ -19,7 +19,7 @@ public interface IOrderService
     Task<IReadOnlyCollection<ActiveOrderGroupModel>> GetActiveOrdersAsync(CancellationToken cancellationToken);
 
     Task<OperationResult<ActiveOrderItemModel>> AdvanceOrderItemStatusAsync(
-        Guid orderId,
+        int orderId,
         Guid orderItemId,
         OrderItemStatus? targetStatus,
         CancellationToken cancellationToken);
@@ -28,5 +28,5 @@ public interface IOrderService
 
     Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(CancellationToken cancellationToken);
 
-    Task<OperationResult> CancelOrderAsync(Guid orderId, Guid customerSessionId, CancellationToken cancellationToken);
+    Task<OperationResult> CancelOrderAsync(int orderId, Guid customerSessionId, CancellationToken cancellationToken);
 }

@@ -39,6 +39,10 @@ public sealed class PastelFlavorService : IPastelFlavorService
         CancellationToken cancellationToken)
     {
         var normalizedName = name.Trim();
+        if (normalizedName.Length == 0)
+        {
+            return OperationResult<PastelFlavor>.Failure(new OperationError(ErrorCodes.FlavorNameRequired, "Name"));
+        }
         var existingFlavor = await _dbContext.PastelFlavors
             .FirstOrDefaultAsync(flavor => flavor.Name == normalizedName, cancellationToken);
 
@@ -75,6 +79,94 @@ public sealed class PastelFlavorService : IPastelFlavorService
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return OperationResult<PastelFlavor>.Success(flavor);
+    }
+
+    public async Task<OperationResult<IReadOnlyCollection<PastelFlavor>>> CreateBatchAsync(
+        IReadOnlyCollection<PastelFlavorCreationModel> flavors,
+        CancellationToken cancellationToken)
+    {
+        if (flavors.Count == 0)
+        {
+            return OperationResult<IReadOnlyCollection<PastelFlavor>>.Success(Array.Empty<PastelFlavor>());
+        }
+
+        var normalizedEntries = flavors
+            .Select(flavor => new
+            {
+                Name = flavor.Name.Trim(),
+                Description = string.IsNullOrWhiteSpace(flavor.Description) ? null : flavor.Description.Trim(),
+                ImageUrl = string.IsNullOrWhiteSpace(flavor.ImageUrl) ? null : flavor.ImageUrl.Trim(),
+                flavor.AvailableQuantity,
+                flavor.Price
+            })
+            .ToList();
+
+        if (normalizedEntries.Any(entry => entry.Name.Length == 0))
+        {
+            return OperationResult<IReadOnlyCollection<PastelFlavor>>.Failure(
+                new OperationError(ErrorCodes.FlavorNameRequired, "Name"));
+        }
+
+        var duplicateNames = normalizedEntries
+            .GroupBy(entry => entry.Name, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToList();
+
+        if (duplicateNames.Count > 0)
+        {
+            return OperationResult<IReadOnlyCollection<PastelFlavor>>.Failure(
+                duplicateNames.Select(name => new OperationError(ErrorCodes.FlavorNameExists, "Name", name)));
+        }
+
+        var normalizedNames = normalizedEntries.Select(entry => entry.Name).ToList();
+        var existingFlavors = await _dbContext.PastelFlavors
+            .Where(flavor => normalizedNames.Contains(flavor.Name))
+            .ToListAsync(cancellationToken);
+
+        var existingByName = existingFlavors.ToDictionary(f => f.Name, StringComparer.OrdinalIgnoreCase);
+        var affectedFlavors = new List<PastelFlavor>();
+
+        await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        foreach (var entry in normalizedEntries)
+        {
+            if (existingByName.TryGetValue(entry.Name, out var existingFlavor))
+            {
+                existingFlavor.AvailableQuantity += entry.AvailableQuantity;
+                existingFlavor.Price = entry.Price;
+
+                if (entry.Description is not null)
+                {
+                    existingFlavor.Description = entry.Description;
+                }
+
+                if (entry.ImageUrl is not null)
+                {
+                    existingFlavor.ImageUrl = entry.ImageUrl;
+                }
+
+                affectedFlavors.Add(existingFlavor);
+                continue;
+            }
+
+            var flavor = new PastelFlavor
+            {
+                Name = entry.Name,
+                Description = entry.Description,
+                ImageUrl = entry.ImageUrl,
+                AvailableQuantity = entry.AvailableQuantity,
+                Price = entry.Price
+            };
+
+            _dbContext.PastelFlavors.Add(flavor);
+            affectedFlavors.Add(flavor);
+        }
+
+        await _dbContext.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
+
+        return OperationResult<IReadOnlyCollection<PastelFlavor>>.Success(affectedFlavors.AsReadOnly());
     }
 
     public async Task<OperationResult> UpdateAsync(

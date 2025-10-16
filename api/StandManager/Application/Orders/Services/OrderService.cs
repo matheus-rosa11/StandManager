@@ -237,7 +237,7 @@ public sealed class OrderService : IOrderService
     }
 
     public async Task<OperationResult<ActiveOrderItemModel>> AdvanceOrderItemStatusAsync(
-        Guid orderId,
+        int orderId,
         Guid orderItemId,
         OrderItemStatus? targetStatus,
         CancellationToken cancellationToken)
@@ -443,7 +443,7 @@ public sealed class OrderService : IOrderService
         return grouped;
     }
 
-    public async Task<OperationResult> CancelOrderAsync(Guid orderId, Guid customerSessionId, CancellationToken cancellationToken)
+    public async Task<OperationResult> CancelOrderAsync(int orderId, Guid customerSessionId, CancellationToken cancellationToken)
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)

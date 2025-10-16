@@ -36,7 +36,7 @@ const VolunteerBoard = () => {
     setExpandedGroup((current) => (current === groupId ? null : groupId));
   };
 
-  const handleAdvance = async (orderId: string, itemId: string) => {
+  const handleAdvance = async (orderId: number, itemId: string) => {
     try {
       setFeedbackMessage(null);
       setUpdatingItemId(itemId);
@@ -154,7 +154,7 @@ const VolunteerBoard = () => {
                           }}
                         >
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <strong>{t('volunteer.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
+                            <strong>{t('volunteer.orderNumber', { order: order.orderId })}</strong>
                             <small style={{ color: 'var(--color-muted)' }}>
                               {t('volunteer.receivedAt', {
                                 time: new Date(order.createdAt).toLocaleTimeString(language)

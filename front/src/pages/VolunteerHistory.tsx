@@ -83,7 +83,7 @@ const VolunteerHistory = () => {
                       <section key={order.orderId} className="card" style={{ border: '1px dashed var(--color-border)', display: 'grid', gap: '0.75rem' }}>
                         <header style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <strong>{t('volunteerHistory.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
+                            <strong>{t('volunteerHistory.orderNumber', { order: order.orderId })}</strong>
                             <small style={{ color: 'var(--color-muted)' }}>
                               {t('volunteerHistory.createdAt', { time: new Date(order.createdAt).toLocaleString(language) })}
                             </small>
