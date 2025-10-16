@@ -119,7 +119,7 @@ const CashierDashboard = () => {
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
         <div>
-          <label htmlFor="customerName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+          <label htmlFor="customerName" className='required' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
             {t('cashier.nameLabel')}
           </label>
           <input
@@ -128,6 +128,7 @@ const CashierDashboard = () => {
             placeholder={t('cashier.namePlaceholder')}
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
+            required
           />
         </div>
 
@@ -151,10 +152,6 @@ const CashierDashboard = () => {
                 <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
                   <header className="pastel-card__header">
                     <strong>{flavor.name}</strong>
-                    {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
-                    <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
-                      {currencyFormatter.format(flavor.price)}
-                    </small>
                   </header>
                   {flavor.imageUrl && (
                     <img

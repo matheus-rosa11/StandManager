@@ -131,7 +131,7 @@ const CustomerOrder = () => {
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
         <div>
-          <label htmlFor="customerName" style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+          <label htmlFor="customerName" className='required' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
             {t('customerOrder.nameLabel')}
           </label>
           <input
@@ -140,12 +140,9 @@ const CustomerOrder = () => {
             placeholder={t('customerOrder.namePlaceholder')}
             value={customerName}
             onChange={(event) => setCustomerName(event.target.value)}
+            required
           />
         </div>
-
-        {sessionId && (
-          <p style={{ color: 'var(--color-muted)' }}>{t('customerOrder.sessionMessage', { sessionId })}</p>
-        )}
 
         <div style={{ display: 'grid', gap: '1rem' }}>
           <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -166,7 +163,6 @@ const CustomerOrder = () => {
                 <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
                   <header className="pastel-card__header">
                     <strong>{flavor.name}</strong>
-                    {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
                   </header>
                   {flavor.imageUrl && (
                     <img
