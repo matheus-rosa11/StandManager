@@ -1,21 +1,25 @@
-export type OrderItemStatus = 'Pending' | 'Frying' | 'Packaging' | 'ReadyForPickup' | 'Completed';
+export type OrderItemStatus = 'Pending' | 'Frying' | 'ReadyForPickup' | 'Completed' | 'Cancelled';
 
-export const ORDER_WORKFLOW: OrderItemStatus[] = ['Pending', 'Frying', 'Packaging', 'ReadyForPickup', 'Completed'];
+export const ORDER_WORKFLOW: OrderItemStatus[] = [
+  'Pending',
+  'Frying',
+  'ReadyForPickup'
+];
 
 export const ORDER_STATUS_LABEL_KEYS: Record<OrderItemStatus, string> = {
   Pending: 'orderStatus.pending',
   Frying: 'orderStatus.frying',
-  Packaging: 'orderStatus.packaging',
   ReadyForPickup: 'orderStatus.readyForPickup',
-  Completed: 'orderStatus.completed'
+  Completed: 'orderStatus.finalized',
+  Cancelled: 'orderStatus.cancelled'
 };
 
 const STATUS_CLASS_MAP: Record<OrderItemStatus, string> = {
   Pending: 'status-pending',
   Frying: 'status-frying',
-  Packaging: 'status-packaging',
   ReadyForPickup: 'status-readyforpickup',
-  Completed: 'status-completed'
+  Completed: 'status-completed',
+  Cancelled: 'status-cancelled'
 };
 
 export function getStatusClass(status: OrderItemStatus): string {
@@ -28,6 +32,14 @@ export interface WorkflowProgressDescriptor {
 }
 
 export function describeWorkflowProgress(status: OrderItemStatus): WorkflowProgressDescriptor {
+  if (status === 'Cancelled') {
+    return { key: 'orderStatus.cancelled' };
+  }
+
+  if (status === 'Completed') {
+    return { key: 'orderStatus.finalized' };
+  }
+
   const stepIndex = ORDER_WORKFLOW.indexOf(status);
   if (stepIndex === -1) {
     return { key: 'orderStatus.unknown' };

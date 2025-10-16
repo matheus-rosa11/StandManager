@@ -8,6 +8,7 @@ public sealed record ActiveOrderItemModel(
     Guid PastelFlavorId,
     string FlavorName,
     int Quantity,
+    decimal UnitPrice,
     OrderItemStatus Status,
     DateTimeOffset CreatedAt,
     DateTimeOffset? LastUpdatedAt);

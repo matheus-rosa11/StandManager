@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace StandManager.DTOs;
 
-public record PastelFlavorResponse(Guid Id, string Name, string? Description, string? ImageUrl, int AvailableQuantity);
+public record PastelFlavorResponse(Guid Id, string Name, string? Description, string? ImageUrl, int AvailableQuantity, decimal Price);
 
 public class CreatePastelFlavorRequest
 {
@@ -19,6 +19,9 @@ public class CreatePastelFlavorRequest
 
     [Range(0, int.MaxValue)]
     public int AvailableQuantity { get; init; }
+
+    [Range(typeof(decimal), "0", "1000000")]
+    public decimal Price { get; init; }
 }
 
 public class UpdatePastelFlavorRequest
@@ -33,6 +36,9 @@ public class UpdatePastelFlavorRequest
     [Url]
     [StringLength(256)]
     public string? ImageUrl { get; init; }
+
+    [Range(typeof(decimal), "0", "1000000")]
+    public decimal Price { get; init; }
 }
 
 public class UpdatePastelInventoryRequest

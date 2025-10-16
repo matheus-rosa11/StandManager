@@ -21,10 +21,15 @@ public class OrderItem
 
     public OrderItemStatus Status { get; set; } = OrderItemStatus.Pending;
 
+    [Range(typeof(decimal), "0", "1000000")]
+    public decimal UnitPrice { get; set; }
+
     [StringLength(256)]
     public string? Notes { get; set; }
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public DateTimeOffset? LastUpdatedAt { get; set; }
+
+    public ICollection<OrderItemStatusHistory> StatusHistory { get; set; } = new HashSet<OrderItemStatusHistory>();
 }

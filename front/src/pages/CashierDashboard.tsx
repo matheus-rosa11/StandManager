@@ -1,8 +1,9 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
-import { useTranslation } from '../i18n';
+import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 
 const POLLING_INTERVAL_MS = 7000;
@@ -18,6 +19,8 @@ const CashierDashboard = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { t } = useTranslation();
+  const { language } = useI18n();
+  const navigate = useNavigate();
 
   const availableFlavors = useMemo(() => flavors ?? [], [flavors]);
 
@@ -34,6 +37,21 @@ const CashierDashboard = () => {
   };
 
   const totalItems = useMemo(() => Object.values(cart).reduce((acc, value) => acc + value, 0), [cart]);
+
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat(language, { style: 'currency', currency: 'BRL' }),
+    [language]
+  );
+
+  const totalAmount = useMemo(() => {
+    return Object.entries(cart).reduce((acc, [flavorId, quantity]) => {
+      const flavor = availableFlavors.find((item) => item.id === flavorId);
+      if (!flavor) {
+        return acc;
+      }
+      return acc + flavor.price * quantity;
+    }, 0);
+  }, [availableFlavors, cart]);
 
   const isFormValid = customerName.trim().length > 0 && totalItems > 0;
 
@@ -75,9 +93,12 @@ const CashierDashboard = () => {
       return;
     }
 
-    const timer = window.setTimeout(() => setShowSuccessModal(false), 2000);
+    const timer = window.setTimeout(() => {
+      setShowSuccessModal(false);
+      navigate('/cashier/novo', { replace: true });
+    }, 2000);
     return () => window.clearTimeout(timer);
-  }, [showSuccessModal]);
+  }, [navigate, showSuccessModal]);
 
   return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
@@ -127,8 +148,8 @@ const CashierDashboard = () => {
               const isOutOfStock = flavor.availableQuantity === 0;
 
               return (
-                <article key={flavor.id} className="card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
-                  <header style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
+                  <header className="pastel-card__header">
                     <strong>{flavor.name}</strong>
                     {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
                   </header>
@@ -136,12 +157,15 @@ const CashierDashboard = () => {
                     <img
                       src={flavor.imageUrl}
                       alt={`Foto do pastel sabor ${flavor.name}`}
-                      style={{ width: '100%', borderRadius: '0.75rem', marginTop: '0.75rem' }}
+                      className="pastel-card__image"
                     />
                   )}
-                  <footer style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <span style={{ color: 'var(--color-muted)' }}>{t('cashier.inStock', { quantity: flavor.availableQuantity })}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <footer className="pastel-card__footer">
+                    <div className="pastel-card__meta">
+                      <small style={{ fontWeight: 600 }}>{currencyFormatter.format(flavor.price)}</small>
+                      <small>{t('cashier.inStock', { quantity: flavor.availableQuantity })}</small>
+                    </div>
+                    <div className="pastel-card__actions">
                       <button
                         type="button"
                         className="button"
@@ -168,7 +192,12 @@ const CashierDashboard = () => {
         </div>
 
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div>{t('cashier.totalPastels', { count: totalItems })}</div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span>{t('cashier.totalPastels', { count: totalItems })}</span>
+            <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
+              {t('cashier.totalAmount', { value: currencyFormatter.format(totalAmount) })}
+            </small>
+          </div>
           <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
             {isSubmitting ? t('cashier.submitting') : t('cashier.submit')}
           </button>
