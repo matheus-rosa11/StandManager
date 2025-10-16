@@ -12,4 +12,6 @@ public static class ErrorCodes
     public const string OrderItemAlreadyCompleted = "errors.order.item_completed";
     public const string OrderItemNotFound = "errors.order.item_not_found";
     public const string OrderMustHaveItems = "errors.order.must_have_items";
+    public const string OrderNotFound = "errors.order.not_found";
+    public const string OrderCannotBeCancelled = "errors.order.cannot_cancel";
 }

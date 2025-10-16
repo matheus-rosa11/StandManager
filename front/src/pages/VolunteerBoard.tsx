@@ -18,6 +18,11 @@ const VolunteerBoard = () => {
 
   const groupedOrders = useMemo(() => orderGroups ?? [], [orderGroups]);
 
+  const currencyFormatter = useMemo(
+    () => new Intl.NumberFormat(language, { style: 'currency', currency: 'BRL' }),
+    [language]
+  );
+
   const toggleGroup = (groupId: string) => {
     setExpandedGroup((current) => (current === groupId ? null : groupId));
   };
@@ -45,7 +50,9 @@ const VolunteerBoard = () => {
       const groupPending = group.orders.reduce((orderAcc, order) => {
         return (
           orderAcc +
-          order.items.filter((item) => item.status !== 'Completed').reduce((sum, item) => sum + item.quantity, 0)
+          order.items
+            .filter((item) => item.status !== 'Completed' && item.status !== 'Cancelled')
+            .reduce((sum, item) => sum + item.quantity, 0)
         );
       }, 0);
       return acc + groupPending;
@@ -78,7 +85,7 @@ const VolunteerBoard = () => {
               return (
                 acc +
                 order.items
-                  .filter((item) => item.status !== 'Completed')
+                  .filter((item) => item.status !== 'Completed' && item.status !== 'Cancelled')
                   .reduce((sum, item) => sum + item.quantity, 0)
               );
             }, 0);
@@ -109,12 +116,25 @@ const VolunteerBoard = () => {
                   <div style={{ marginTop: '1rem', display: 'grid', gap: '1rem' }}>
                     {group.orders.map((order) => (
                       <section key={order.orderId} className="card" style={{ border: '1px dashed var(--color-border)' }}>
-                        <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <strong>{t('volunteer.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
-                          <small style={{ color: 'var(--color-muted)' }}>
-                            {t('volunteer.receivedAt', {
-                              time: new Date(order.createdAt).toLocaleTimeString(language)
-                            })}
+                        <header
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'flex-start',
+                            gap: '0.5rem',
+                            flexWrap: 'wrap'
+                          }}
+                        >
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <strong>{t('volunteer.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
+                            <small style={{ color: 'var(--color-muted)' }}>
+                              {t('volunteer.receivedAt', {
+                                time: new Date(order.createdAt).toLocaleTimeString(language)
+                              })}
+                            </small>
+                          </div>
+                          <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
+                            {t('volunteer.orderTotal', { value: currencyFormatter.format(order.totalAmount) })}
                           </small>
                         </header>
                         <ul style={{ marginTop: '1rem', display: 'grid', gap: '0.75rem' }}>

@@ -57,6 +57,12 @@ namespace StandManager.Migrations
                     b.Property<Guid>("CustomerSessionId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("TotalAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m);
+
                     b.HasKey("Id");
 
                     b.HasIndex("CustomerSessionId");
@@ -94,6 +100,12 @@ namespace StandManager.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
+                    b.Property<decimal>("UnitPrice")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m);
+
                     b.HasKey("Id");
 
                     b.HasIndex("OrderId");
@@ -101,6 +113,28 @@ namespace StandManager.Migrations
                     b.HasIndex("PastelFlavorId");
 
                     b.ToTable("OrderItems");
+                });
+
+            modelBuilder.Entity("StandManager.Entities.OrderItemStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("OrderItemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrderItemId", "ChangedAt");
+
+                    b.ToTable("OrderItemStatusHistories");
                 });
 
             modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>
@@ -127,6 +161,12 @@ namespace StandManager.Migrations
                         .IsRequired()
                         .HasMaxLength(80)
                         .HasColumnType("character varying(80)");
+
+                    b.Property<decimal>("Price")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasDefaultValue(0m);
 
                     b.HasKey("Id");
 
@@ -166,6 +206,17 @@ namespace StandManager.Migrations
                     b.Navigation("PastelFlavor");
                 });
 
+            modelBuilder.Entity("StandManager.Entities.OrderItemStatusHistory", b =>
+                {
+                    b.HasOne("StandManager.Entities.OrderItem", "OrderItem")
+                        .WithMany("StatusHistory")
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("OrderItem");
+                });
+
             modelBuilder.Entity("StandManager.Entities.CustomerSession", b =>
                 {
                     b.Navigation("Orders");
@@ -174,6 +225,11 @@ namespace StandManager.Migrations
             modelBuilder.Entity("StandManager.Entities.Order", b =>
                 {
                     b.Navigation("Items");
+                });
+
+            modelBuilder.Entity("StandManager.Entities.OrderItem", b =>
+                {
+                    b.Navigation("StatusHistory");
                 });
 
             modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>

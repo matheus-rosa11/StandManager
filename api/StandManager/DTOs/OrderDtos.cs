@@ -27,14 +27,47 @@ public class CreateOrderRequest
     public IReadOnlyCollection<OrderItemRequest> Items { get; init; } = Array.Empty<OrderItemRequest>();
 }
 
-public record OrderCreatedResponse(Guid OrderId, Guid CustomerSessionId, IReadOnlyCollection<OrderItemSummary> Items);
+public record OrderCreatedResponse(Guid OrderId, Guid CustomerSessionId, decimal TotalAmount, IReadOnlyCollection<OrderItemSummary> Items);
 
-public record OrderItemSummary(Guid OrderItemId, Guid PastelFlavorId, int Quantity, OrderItemStatus Status);
+public record OrderItemSummary(Guid OrderItemId, Guid PastelFlavorId, int Quantity, OrderItemStatus Status, decimal UnitPrice);
 
 public record ActiveOrderGroupResponse(Guid CustomerSessionId, string CustomerName, IReadOnlyCollection<ActiveOrderResponse> Orders);
 
-public record ActiveOrderResponse(Guid OrderId, DateTimeOffset CreatedAt, IReadOnlyCollection<ActiveOrderItemResponse> Items);
+public record ActiveOrderResponse(Guid OrderId, DateTimeOffset CreatedAt, decimal TotalAmount, IReadOnlyCollection<ActiveOrderItemResponse> Items);
 
-public record ActiveOrderItemResponse(Guid ItemId, Guid PastelFlavorId, string FlavorName, int Quantity, OrderItemStatus Status, DateTimeOffset CreatedAt, DateTimeOffset? LastUpdatedAt);
+public record ActiveOrderItemResponse(Guid ItemId, Guid PastelFlavorId, string FlavorName, int Quantity, decimal UnitPrice, OrderItemStatus Status, DateTimeOffset CreatedAt, DateTimeOffset? LastUpdatedAt);
+
+public record CustomerOrderResponse(Guid OrderId, DateTimeOffset CreatedAt, decimal TotalAmount, bool IsCancelable, IReadOnlyCollection<CustomerOrderItemResponse> Items);
+
+public record CustomerOrderItemResponse(
+    Guid ItemId,
+    Guid PastelFlavorId,
+    string FlavorName,
+    int Quantity,
+    decimal UnitPrice,
+    OrderItemStatus Status,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset? LastUpdatedAt,
+    IReadOnlyCollection<OrderStatusSnapshotResponse> History);
+
+public record OrderStatusSnapshotResponse(OrderItemStatus Status, DateTimeOffset ChangedAt);
+
+public record OrderHistoryGroupResponse(Guid CustomerSessionId, string CustomerName, IReadOnlyCollection<OrderHistoryOrderResponse> Orders);
+
+public record OrderHistoryOrderResponse(Guid OrderId, DateTimeOffset CreatedAt, decimal TotalAmount, IReadOnlyCollection<OrderHistoryItemResponse> Items);
+
+public record OrderHistoryItemResponse(
+    Guid ItemId,
+    Guid PastelFlavorId,
+    string FlavorName,
+    int Quantity,
+    decimal UnitPrice,
+    IReadOnlyCollection<OrderStatusSnapshotResponse> History);
+
+public class CancelOrderRequest
+{
+    [Required]
+    public Guid CustomerSessionId { get; init; }
+}
 
 public record AdvanceOrderItemRequest(OrderItemStatus? TargetStatus);

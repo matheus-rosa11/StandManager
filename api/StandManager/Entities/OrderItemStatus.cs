@@ -6,5 +6,7 @@ public enum OrderItemStatus
     Frying = 1,
     Packaging = 2,
     ReadyForPickup = 3,
-    Completed = 4
+    OutForDelivery = 4,
+    Completed = 5,
+    Cancelled = 6
 }

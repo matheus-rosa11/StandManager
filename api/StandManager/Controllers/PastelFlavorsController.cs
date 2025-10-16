@@ -32,7 +32,7 @@ public class PastelFlavorsController : LocalizedControllerBase
         {
             var flavors = await _pastelFlavorService.GetAllAsync(cancellationToken);
             var response = flavors
-                .Select(f => new PastelFlavorResponse(f.Id, f.Name, f.Description, f.ImageUrl, f.AvailableQuantity))
+                .Select(f => new PastelFlavorResponse(f.Id, f.Name, f.Description, f.ImageUrl, f.AvailableQuantity, f.Price))
                 .ToList();
 
             return Ok(response);
@@ -66,6 +66,7 @@ public class PastelFlavorsController : LocalizedControllerBase
                 request.Description,
                 request.ImageUrl,
                 request.AvailableQuantity,
+                request.Price,
                 cancellationToken);
 
             if (!result.Succeeded)
@@ -109,6 +110,7 @@ public class PastelFlavorsController : LocalizedControllerBase
                 request.Name,
                 request.Description,
                 request.ImageUrl,
+                request.Price,
                 cancellationToken);
 
             if (!result.Succeeded)

@@ -195,6 +195,16 @@ input[type='text']:focus {
   color: #7f8c8d;
 }
 
+.status-outfordelivery {
+  background: rgba(241, 196, 15, 0.18);
+  color: #b9770e;
+}
+
+.status-cancelled {
+  background: rgba(192, 57, 43, 0.12);
+  color: #c0392b;
+}
+
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -252,11 +262,72 @@ input[type='text']:focus {
     gap: 1rem;
   }
 
+  .app-header nav {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .app-header a {
+    padding: 0.4rem 0.6rem;
+  }
+
   .app-content {
     padding: 1rem;
   }
 
   .card {
     padding: 1rem;
+  }
+}
+
+.timeline {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.timeline-item {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.timeline-item::before {
+  content: '';
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  display: inline-block;
+  margin-left: 4px;
+}
+
+.timeline-divider {
+  width: 2px;
+  background: linear-gradient(180deg, rgba(230, 126, 34, 0.2), rgba(230, 126, 34, 0));
+  justify-self: center;
+  height: 100%;
+}
+
+.timeline-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.order-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (max-width: 640px) {
+  .timeline-item {
+    grid-template-columns: 1fr;
+  }
+
+  .timeline-item::before,
+  .timeline-divider {
+    display: none;
   }
 }
