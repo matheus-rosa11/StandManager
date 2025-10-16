@@ -33,7 +33,7 @@ namespace StandManager.Migrations
                     Description = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     ImageUrl = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     AvailableQuantity = table.Column<int>(type: "integer", nullable: false),
-                    Price = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m),
+                    Price = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false, defaultValue: 0m),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
                 constraints: table =>
@@ -49,7 +49,7 @@ namespace StandManager.Migrations
                     CustomerSessionId = table.Column<Guid>(type: "uuid", nullable: false),
                     CustomerNameSnapshot = table.Column<string>(type: "text", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    TotalAmount = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m)
+                    TotalAmount = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false, defaultValue: 0m)
                 },
                 constraints: table =>
                 {
@@ -71,7 +71,7 @@ namespace StandManager.Migrations
                     PastelFlavorId = table.Column<Guid>(type: "uuid", nullable: false),
                     Quantity = table.Column<int>(type: "integer", nullable: false, defaultValue: 1),
                     Status = table.Column<int>(type: "integer", nullable: false),
-                    UnitPrice = table.Column<decimal>(type: "numeric(10,2)", nullable: false, defaultValue: 0m),
+                    UnitPrice = table.Column<decimal>(type: "numeric(10,2)", precision: 10, scale: 2, nullable: false, defaultValue: 0m),
                     Notes = table.Column<string>(type: "character varying(256)", maxLength: 256, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true)
@@ -124,6 +124,11 @@ namespace StandManager.Migrations
                 column: "PastelFlavorId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_OrderItemStatusHistories_OrderItemId_ChangedAt",
+                table: "OrderItemStatusHistories",
+                columns: new[] { "OrderItemId", "ChangedAt" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Orders_CustomerSessionId",
                 table: "Orders",
                 column: "CustomerSessionId");
@@ -133,11 +138,6 @@ namespace StandManager.Migrations
                 table: "PastelFlavors",
                 column: "Name",
                 unique: true);
-
-            migrationBuilder.CreateIndex(
-                name: "IX_OrderItemStatusHistories_OrderItemId_ChangedAt",
-                table: "OrderItemStatusHistories",
-                columns: new[] { "OrderItemId", "ChangedAt" });
         }
 
         /// <inheritdoc />

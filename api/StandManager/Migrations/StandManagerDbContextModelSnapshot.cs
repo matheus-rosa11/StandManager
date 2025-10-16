@@ -59,6 +59,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("TotalAmount")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -101,6 +102,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("UnitPrice")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -162,6 +164,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("Price")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -198,8 +201,6 @@ namespace StandManager.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.Navigation("StatusHistory");
-
                     b.Navigation("Order");
 
                     b.Navigation("PastelFlavor");
@@ -226,14 +227,14 @@ namespace StandManager.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>
-                {
-                    b.Navigation("OrderItems");
-                });
-
             modelBuilder.Entity("StandManager.Entities.OrderItem", b =>
                 {
                     b.Navigation("StatusHistory");
+                });
+
+            modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>
+                {
+                    b.Navigation("OrderItems");
                 });
 #pragma warning restore 612, 618
         }

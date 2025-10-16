@@ -12,7 +12,7 @@ using StandManager.Data;
 namespace StandManager.Migrations
 {
     [DbContext(typeof(StandManagerDbContext))]
-    [Migration("20251015202522_InitialCreate")]
+    [Migration("20251016131805_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -62,6 +62,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("TotalAmount")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -104,6 +105,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("UnitPrice")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -165,6 +167,7 @@ namespace StandManager.Migrations
 
                     b.Property<decimal>("Price")
                         .ValueGeneratedOnAdd()
+                        .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)")
                         .HasDefaultValue(0m);
 
@@ -227,14 +230,14 @@ namespace StandManager.Migrations
                     b.Navigation("Items");
                 });
 
-            modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>
-                {
-                    b.Navigation("OrderItems");
-                });
-
             modelBuilder.Entity("StandManager.Entities.OrderItem", b =>
                 {
                     b.Navigation("StatusHistory");
+                });
+
+            modelBuilder.Entity("StandManager.Entities.PastelFlavor", b =>
+                {
+                    b.Navigation("OrderItems");
                 });
 #pragma warning restore 612, 618
         }
