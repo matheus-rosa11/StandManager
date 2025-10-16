@@ -12,7 +12,7 @@ using StandManager.Data;
 namespace StandManager.Migrations
 {
     [DbContext(typeof(StandManagerDbContext))]
-    [Migration("20251016144644_InitialCreate")]
+    [Migration("20251016182812_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -46,9 +46,11 @@ namespace StandManager.Migrations
 
             modelBuilder.Entity("StandManager.Entities.Order", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -89,8 +91,8 @@ namespace StandManager.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
-                    b.Property<Guid>("OrderId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("OrderId")
+                        .HasColumnType("integer");
 
                     b.Property<Guid>("PastelFlavorId")
                         .HasColumnType("uuid");

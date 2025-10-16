@@ -30,7 +30,6 @@ public class CreatePastelFlavorBatchRequest
 {
     [Required]
     [MinLength(1)]
-    [ValidateComplexType]
     public List<CreatePastelFlavorRequest> Items { get; init; } = new();
 }
 
