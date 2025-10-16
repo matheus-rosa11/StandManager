@@ -12,7 +12,7 @@ namespace StandManager
 {
     public class Program
     {
-        public static void Main(string[] args)
+        public static async Task Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
 
@@ -63,8 +63,15 @@ namespace StandManager
 
             using (var scope = app.Services.CreateScope())
             {
+                var env = scope.ServiceProvider.GetRequiredService<IWebHostEnvironment>();
                 var dbContext = scope.ServiceProvider.GetRequiredService<StandManagerDbContext>();
+
                 dbContext.Database.Migrate();
+
+                //if (env.IsDevelopment())
+                //{
+                    await StandManagerSeeder.SeedAsync(dbContext);
+                //}
             }
 
             app.UseSwagger();
