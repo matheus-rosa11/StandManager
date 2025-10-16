@@ -82,5 +82,20 @@ public class StandManagerDbContext : DbContext
 
             entity.Property(h => h.ChangedAt).IsRequired();
         });
+
+        modelBuilder.Entity<Order>(entity =>
+        {
+            entity.Property(o => o.TotalAmount).HasPrecision(10, 2).HasDefaultValue(0m);
+        });
+
+        modelBuilder.Entity<OrderItemStatusHistory>(entity =>
+        {
+            entity.HasIndex(history => new { history.OrderItemId, history.ChangedAt });
+
+            entity.HasOne(history => history.OrderItem)
+                .WithMany(item => item.StatusHistory)
+                .HasForeignKey(history => history.OrderItemId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
     }
 }

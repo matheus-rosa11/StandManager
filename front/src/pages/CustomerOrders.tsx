@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { cancelOrder, CustomerOrder, fetchCustomerOrders } from '../api/orders';
 import { HttpError } from '../api/client';
 import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
-import { ORDER_STATUS_LABEL_KEYS, OrderItemStatus, getStatusClass } from '../utils/orderStatus';
+import { ORDER_STATUS_LABEL_KEYS, getStatusClass } from '../utils/orderStatus';
 
 const POLLING_INTERVAL_MS = 8000;
 const SESSION_STORAGE_KEY = 'stand-manager.customer-session-id';
@@ -13,7 +13,6 @@ const CustomerOrders = () => {
   const { language } = useI18n();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [notification, setNotification] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,39 +43,6 @@ const CustomerOrders = () => {
     () => new Intl.NumberFormat(language, { style: 'currency', currency: 'BRL' }),
     [language]
   );
-
-  const previousStatusesRef = useRef<Map<string, OrderItemStatus>>(new Map());
-
-  useEffect(() => {
-    if (!orderList) {
-      return;
-    }
-
-    const previous = previousStatusesRef.current;
-    const next = new Map<string, OrderItemStatus>();
-
-    orderList.forEach((order) => {
-      order.items.forEach((item) => {
-        const key = `${order.orderId}:${item.itemId}`;
-        const lastStatus = previous.get(key);
-        if (item.status === 'OutForDelivery' && lastStatus !== 'OutForDelivery') {
-          setNotification(t('customerOrders.notificationOutForDelivery', { order: order.orderId.slice(0, 8) }));
-        }
-        next.set(key, item.status);
-      });
-    });
-
-    previousStatusesRef.current = next;
-  }, [orderList, t]);
-
-  useEffect(() => {
-    if (!notification) {
-      return;
-    }
-
-    const timer = window.setTimeout(() => setNotification(null), 6000);
-    return () => window.clearTimeout(timer);
-  }, [notification]);
 
   const handleCancel = async (orderId: string) => {
     if (!sessionId) {
@@ -120,7 +86,6 @@ const CustomerOrders = () => {
           <button className="button" onClick={refresh} disabled={loading}>
             {t('customerOrders.refresh')}
           </button>
-          {notification && <span className="status-badge status-outfordelivery">{notification}</span>}
         </div>
         {feedback && <p style={{ color: 'var(--color-muted)' }}>{feedback}</p>}
       </header>
@@ -185,24 +150,16 @@ const CustomerOrders = () => {
                     </header>
                     <div>
                       <strong>{t('customerOrders.timeline')}</strong>
-                      <div className="timeline">
-                        {item.history.map((entry, index) => {
-                          const isLast = index === item.history.length - 1;
-                          return (
-                            <div key={`${entry.status}-${entry.changedAt}`} className="timeline-item">
-                              {!isLast && <span className="timeline-divider" aria-hidden />}
-                              <div className="timeline-content">
-                                <span className={`status-badge ${getStatusClass(entry.status)}`}>
-                                  {t(ORDER_STATUS_LABEL_KEYS[entry.status])}
-                                </span>
-                                <small style={{ color: 'var(--color-muted)' }}>
-                                  {new Date(entry.changedAt).toLocaleString(language)}
-                                </small>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                      <ul className="history-list">
+                        {item.history.map((entry) => (
+                          <li key={`${entry.status}-${entry.changedAt}`}>
+                            <span className={`status-badge ${getStatusClass(entry.status)}`}>
+                              {t(ORDER_STATUS_LABEL_KEYS[entry.status])}
+                            </span>
+                            <small>{new Date(entry.changedAt).toLocaleString(language)}</small>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </section>
                 ))}

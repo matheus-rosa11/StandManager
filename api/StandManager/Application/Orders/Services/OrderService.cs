@@ -161,7 +161,14 @@ public sealed class OrderService : IOrderService
             order.Id,
             session.Id,
             order.TotalAmount,
-            order.Items.Select(item => new OrderItemSummaryModel(item.Id, item.PastelFlavorId, item.Quantity, item.Status, item.UnitPrice)).ToList());
+            order.Items
+                .Select(item => new OrderItemSummaryModel(
+                    item.Id,
+                    item.PastelFlavorId,
+                    item.Quantity,
+                    NormalizeStatus(item.Status),
+                    item.UnitPrice))
+                .ToList());
 
         return OperationResult<OrderCreationResult>.Success(result);
     }
@@ -170,7 +177,10 @@ public sealed class OrderService : IOrderService
     {
         var orders = await _dbContext.Orders
             .AsNoTracking()
-            .Where(order => order.Items.Any(item => item.Status != OrderItemStatus.Completed && item.Status != OrderItemStatus.Cancelled))
+            .Where(order => order.Items.Any(item =>
+                item.Status != OrderItemStatus.Completed &&
+                item.Status != OrderItemStatus.Cancelled &&
+                item.Status != OrderItemStatus.OutForDelivery))
             .Select(order => new
             {
                 order.Id,
@@ -179,7 +189,10 @@ public sealed class OrderService : IOrderService
                 order.CreatedAt,
                 order.TotalAmount,
                 Items = order.Items
-                    .Where(item => item.Status != OrderItemStatus.Completed && item.Status != OrderItemStatus.Cancelled)
+                    .Where(item =>
+                        item.Status != OrderItemStatus.Completed &&
+                        item.Status != OrderItemStatus.Cancelled &&
+                        item.Status != OrderItemStatus.OutForDelivery)
                     .OrderBy(item => item.CreatedAt)
                     .Select(item => new
                     {
@@ -212,7 +225,7 @@ public sealed class OrderService : IOrderService
                         item.FlavorName,
                         item.Quantity,
                         item.UnitPrice,
-                        item.Status,
+                        NormalizeStatus(item.Status),
                         item.CreatedAt,
                         item.LastUpdatedAt
                     )).ToList()
@@ -294,7 +307,7 @@ public sealed class OrderService : IOrderService
             item.PastelFlavor.Name,
             item.Quantity,
             item.UnitPrice,
-            item.Status,
+            NormalizeStatus(item.Status),
             item.CreatedAt,
             item.LastUpdatedAt);
 
@@ -340,19 +353,23 @@ public sealed class OrderService : IOrderService
                 order.TotalAmount,
                 order.Items.Count > 0 && order.Items.All(item => item.Status == OrderItemStatus.Pending),
                 order.Items
-                    .Select(item => new CustomerOrderItemModel(
-                        item.Id,
-                        item.PastelFlavorId,
-                        item.FlavorName,
-                        item.Quantity,
-                        item.UnitPrice,
-                        item.Status,
-                        item.CreatedAt,
-                        item.LastUpdatedAt,
-                        item.History
-                            .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt))
-                            .ToList()
-                    ))
+                    .Select(item =>
+                    {
+                        var history = NormalizeHistory(item.History
+                            .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt)));
+
+                        return new CustomerOrderItemModel(
+                            item.Id,
+                            item.PastelFlavorId,
+                            item.FlavorName,
+                            item.Quantity,
+                            item.UnitPrice,
+                            NormalizeStatus(item.Status),
+                            item.CreatedAt,
+                            item.LastUpdatedAt,
+                            history
+                        );
+                    })
                     .ToList()
             ))
             .ToList();
@@ -364,7 +381,9 @@ public sealed class OrderService : IOrderService
     {
         var orders = await _dbContext.Orders
             .AsNoTracking()
-            .Where(order => order.Items.All(item => item.Status == OrderItemStatus.Completed || item.Status == OrderItemStatus.Cancelled))
+            .Where(order => order.Items.Any(item =>
+                item.Status == OrderItemStatus.Completed ||
+                item.Status == OrderItemStatus.OutForDelivery))
             .OrderByDescending(order => order.CreatedAt)
             .Select(order => new
             {
@@ -401,16 +420,20 @@ public sealed class OrderService : IOrderService
                     order.CreatedAt,
                     order.TotalAmount,
                     order.Items
-                        .Select(item => new OrderHistoryItemModel(
-                            item.Id,
-                            item.PastelFlavorId,
-                            item.FlavorName,
-                            item.Quantity,
-                            item.UnitPrice,
-                            item.History
-                                .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt))
-                                .ToList()
-                        ))
+                        .Select(item =>
+                        {
+                            var history = NormalizeHistory(item.History
+                                .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt)));
+
+                            return new OrderHistoryItemModel(
+                                item.Id,
+                                item.PastelFlavorId,
+                                item.FlavorName,
+                                item.Quantity,
+                                item.UnitPrice,
+                                history
+                            );
+                        })
                         .ToList()
                 ))
                 .ToList()
@@ -461,5 +484,29 @@ public sealed class OrderService : IOrderService
         _logger.LogInformation("Order {OrderId} for session {SessionId} was cancelled", order.Id, order.CustomerSessionId);
 
         return OperationResult.Success();
+    }
+
+    private static OrderItemStatus NormalizeStatus(OrderItemStatus status)
+        => status switch
+        {
+            OrderItemStatus.Packaging => OrderItemStatus.Frying,
+            OrderItemStatus.OutForDelivery => OrderItemStatus.ReadyForPickup,
+            _ => status
+        };
+
+    private static IReadOnlyList<OrderStatusSnapshotModel> NormalizeHistory(IEnumerable<OrderStatusSnapshotModel> history)
+    {
+        var normalized = new List<OrderStatusSnapshotModel>();
+
+        foreach (var entry in history.OrderBy(entry => entry.ChangedAt))
+        {
+            var status = NormalizeStatus(entry.Status);
+            if (normalized.Count == 0 || normalized[^1].Status != status)
+            {
+                normalized.Add(new OrderStatusSnapshotModel(status, entry.ChangedAt));
+            }
+        }
+
+        return normalized;
     }
 }

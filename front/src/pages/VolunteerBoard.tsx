@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { advanceOrderItemStatus, fetchActiveOrders } from '../api/orders';
 import { HttpError } from '../api/client';
 import { useI18n, useTranslation } from '../i18n';
@@ -15,6 +15,15 @@ const VolunteerBoard = () => {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+  const [finalizingItems, setFinalizingItems] = useState<Record<string, number>>({});
+  const finalizingTimers = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    return () => {
+      Object.values(finalizingTimers.current).forEach((timerId) => window.clearTimeout(timerId));
+      finalizingTimers.current = {};
+    };
+  }, []);
 
   const groupedOrders = useMemo(() => orderGroups ?? [], [orderGroups]);
 
@@ -31,9 +40,23 @@ const VolunteerBoard = () => {
     try {
       setFeedbackMessage(null);
       setUpdatingItemId(itemId);
-      await advanceOrderItemStatus(orderId, itemId);
+      const result = await advanceOrderItemStatus(orderId, itemId);
       setFeedbackMessage(t('volunteer.success'));
-      refresh();
+
+      if (result.status === 'Completed') {
+        setFinalizingItems((current) => ({ ...current, [itemId]: result.quantity }));
+        const timerId = window.setTimeout(() => {
+          setFinalizingItems((current) => {
+            const { [itemId]: _removed, ...rest } = current;
+            return rest;
+          });
+          refresh();
+          delete finalizingTimers.current[itemId];
+        }, 1600);
+        finalizingTimers.current[itemId] = timerId;
+      } else {
+        refresh();
+      }
     } catch (err) {
       if (err instanceof HttpError) {
         setFeedbackMessage(err.detail ?? err.message);
@@ -46,7 +69,7 @@ const VolunteerBoard = () => {
   };
 
   const totalPendingItems = useMemo(() => {
-    return groupedOrders.reduce((acc, group) => {
+    const base = groupedOrders.reduce((acc, group) => {
       const groupPending = group.orders.reduce((orderAcc, order) => {
         return (
           orderAcc +
@@ -57,7 +80,10 @@ const VolunteerBoard = () => {
       }, 0);
       return acc + groupPending;
     }, 0);
-  }, [groupedOrders]);
+
+    const finalizingCount = Object.values(finalizingItems).reduce((acc, quantity) => acc + quantity, 0);
+    return Math.max(base - finalizingCount, 0);
+  }, [finalizingItems, groupedOrders]);
 
   return (
     <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -69,7 +95,9 @@ const VolunteerBoard = () => {
         <button className="button" style={{ alignSelf: 'flex-start' }} onClick={refresh} disabled={loading}>
           {t('volunteer.refresh')}
         </button>
-        {feedbackMessage && <p style={{ color: 'var(--color-muted)' }}>{feedbackMessage}</p>}
+        <div style={{ minHeight: '1.25rem' }}>
+          {feedbackMessage && <p style={{ color: 'var(--color-muted)' }}>{feedbackMessage}</p>}
+        </div>
       </header>
 
       {loading && !orderGroups && <p>{t('volunteer.loading')}</p>}
@@ -144,17 +172,13 @@ const VolunteerBoard = () => {
                             const unitNumber = index + 1;
                             const itemKey = `${item.itemId}-${unitNumber}`;
                             const progress = describeWorkflowProgress(item.status);
+                            const isFinalizing = finalizingItems[item.itemId] !== undefined;
                             return (
                               <li
                                 key={itemKey}
-                                style={{
-                                  display: 'grid',
-                                  gap: '0.5rem',
-                                  gridTemplateColumns: '1.5fr 1fr auto',
-                                  alignItems: 'center'
-                                }}
+                                className="volunteer-item-row"
                               >
-                                <div>
+                                <div className="volunteer-item-row__info">
                                   <div style={{ fontWeight: 600 }}>{item.flavorName}</div>
                                   {item.quantity > 1 && (
                                     <small style={{ color: 'var(--color-muted)' }}>
@@ -162,21 +186,32 @@ const VolunteerBoard = () => {
                                     </small>
                                   )}
                                 </div>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                                  <span className={`status-badge ${getStatusClass(item.status)}`}>
-                                    {t(ORDER_STATUS_LABEL_KEYS[item.status])}
-                                  </span>
-                                  <small style={{ color: 'var(--color-muted)' }}>
-                                    {t(progress.key, progress.params)}
-                                  </small>
-                                </div>
-                                <button
-                                  className="button"
-                                  onClick={() => handleAdvance(order.orderId, item.itemId)}
-                                  disabled={item.status === 'Completed' || updatingItemId === item.itemId}
-                                >
-                                  {item.status === 'Completed' ? t('volunteer.completed') : t('volunteer.advance')}
-                                </button>
+                                {isFinalizing ? (
+                                  <div className="volunteer-item-row__finalized">
+                                    <span aria-hidden="true">✓</span>
+                                    <span>{t('volunteer.finalizedMessage')}</span>
+                                  </div>
+                                ) : (
+                                  <>
+                                    <div className="volunteer-item-row__status">
+                                      <span className={`status-badge ${getStatusClass(item.status)}`}>
+                                        {t(ORDER_STATUS_LABEL_KEYS[item.status])}
+                                      </span>
+                                      <small style={{ color: 'var(--color-muted)' }}>
+                                        {t(progress.key, progress.params)}
+                                      </small>
+                                    </div>
+                                    <div className="volunteer-item-row__actions">
+                                      <button
+                                        className="button"
+                                        onClick={() => handleAdvance(order.orderId, item.itemId)}
+                                        disabled={updatingItemId === item.itemId}
+                                      >
+                                        {t('volunteer.advance')}
+                                      </button>
+                                    </div>
+                                  </>
+                                )}
                               </li>
                             );
                           })}

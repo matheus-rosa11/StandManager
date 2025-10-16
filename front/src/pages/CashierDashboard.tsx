@@ -148,8 +148,8 @@ const CashierDashboard = () => {
               const isOutOfStock = flavor.availableQuantity === 0;
 
               return (
-                <article key={flavor.id} className="card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
-                  <header style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
+                  <header className="pastel-card__header">
                     <strong>{flavor.name}</strong>
                     {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
                     <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
@@ -160,12 +160,15 @@ const CashierDashboard = () => {
                     <img
                       src={flavor.imageUrl}
                       alt={`Foto do pastel sabor ${flavor.name}`}
-                      style={{ width: '100%', borderRadius: '0.75rem', marginTop: '0.75rem' }}
+                      className="pastel-card__image"
                     />
                   )}
-                  <footer style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <span style={{ color: 'var(--color-muted)' }}>{t('cashier.inStock', { quantity: flavor.availableQuantity })}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <footer className="pastel-card__footer">
+                    <div className="pastel-card__meta">
+                      <small style={{ fontWeight: 600 }}>{currencyFormatter.format(flavor.price)}</small>
+                      <small>{t('cashier.inStock', { quantity: flavor.availableQuantity })}</small>
+                    </div>
+                    <div className="pastel-card__actions">
                       <button
                         type="button"
                         className="button"

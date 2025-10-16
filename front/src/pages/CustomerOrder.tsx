@@ -163,42 +163,43 @@ const CustomerOrder = () => {
               const selectedQuantity = cart[flavor.id] ?? 0;
               const isOutOfStock = flavor.availableQuantity === 0;
               return (
-                <article key={flavor.id} className="card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
-                  <strong>{flavor.name}</strong>
+                <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
+                  <header className="pastel-card__header">
+                    <strong>{flavor.name}</strong>
+                    {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
+                  </header>
                   {flavor.imageUrl && (
                     <img
                       src={flavor.imageUrl}
                       alt={`Pastel sabor ${flavor.name}`}
-                      style={{ width: '100%', borderRadius: '0.75rem', marginBottom: '0.75rem' }}
+                      className="pastel-card__image"
                     />
                   )}
-                  <strong>{flavor.name}</strong>
-                  {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
-                  <span style={{ color: 'var(--color-muted)', marginTop: '0.25rem', fontWeight: 600 }}>
-                    {currencyFormatter.format(flavor.price)}
-                  </span>
-                  <span style={{ color: 'var(--color-muted)', marginTop: '0.5rem' }}>
-                    {t('customerOrder.inStock', { quantity: flavor.availableQuantity })}
-                  </span>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.75rem' }}>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => handleAdjustQuantity(flavor, -1)}
-                      disabled={selectedQuantity === 0}
-                    >
-                      -
-                    </button>
-                    <span style={{ minWidth: '2ch', textAlign: 'center', fontWeight: 600 }}>{selectedQuantity}</span>
-                    <button
-                      type="button"
-                      className="button"
-                      onClick={() => handleAdjustQuantity(flavor, 1)}
-                      disabled={isOutOfStock || selectedQuantity >= flavor.availableQuantity}
-                    >
-                      +
-                    </button>
-                  </div>
+                  <footer className="pastel-card__footer">
+                    <div className="pastel-card__meta">
+                      <small style={{ fontWeight: 600 }}>{currencyFormatter.format(flavor.price)}</small>
+                      <small>{t('customerOrder.inStock', { quantity: flavor.availableQuantity })}</small>
+                    </div>
+                    <div className="pastel-card__actions">
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => handleAdjustQuantity(flavor, -1)}
+                        disabled={selectedQuantity === 0}
+                      >
+                        -
+                      </button>
+                      <span style={{ minWidth: '2ch', textAlign: 'center', fontWeight: 600 }}>{selectedQuantity}</span>
+                      <button
+                        type="button"
+                        className="button"
+                        onClick={() => handleAdjustQuantity(flavor, 1)}
+                        disabled={isOutOfStock || selectedQuantity >= flavor.availableQuantity}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </footer>
                 </article>
               );
             })}

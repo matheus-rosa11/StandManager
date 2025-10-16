@@ -54,8 +54,10 @@ namespace StandManager
 #if !DEBUG
             var port = Environment.GetEnvironmentVariable("PORT") ?? "8080";
 
-                        if (!string.IsNullOrWhiteSpace(port))
-                            builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            if (!string.IsNullOrWhiteSpace(port))
+            {
+                builder.WebHost.UseUrls($"http://0.0.0.0:{port}");
+            }
 #endif
             var app = builder.Build();
 

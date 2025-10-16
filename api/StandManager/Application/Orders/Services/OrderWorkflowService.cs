@@ -9,7 +9,6 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
     {
         OrderItemStatus.Pending,
         OrderItemStatus.Frying,
-        OrderItemStatus.Packaging,
         OrderItemStatus.ReadyForPickup,
         OrderItemStatus.OutForDelivery,
         OrderItemStatus.Completed
@@ -17,7 +16,8 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
 
     public OrderItemStatus? GetNextStatus(OrderItemStatus currentStatus)
     {
-        var index = IndexOf(currentStatus);
+        var normalized = Normalize(currentStatus);
+        var index = IndexOf(normalized);
         if (index < 0 || index + 1 >= OrderedStatuses.Count)
         {
             return null;
@@ -28,13 +28,13 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
 
     public bool IsValidForwardTransition(OrderItemStatus currentStatus, OrderItemStatus targetStatus)
     {
-        var currentIndex = IndexOf(currentStatus);
-        var targetIndex = IndexOf(targetStatus);
+        var currentIndex = IndexOf(Normalize(currentStatus));
+        var targetIndex = IndexOf(Normalize(targetStatus));
         return currentIndex >= 0 && targetIndex >= 0 && targetIndex >= currentIndex && targetIndex <= currentIndex + 1;
     }
 
     public bool IsFinalStatus(OrderItemStatus status)
-        => status == OrderItemStatus.Cancelled || IndexOf(status) == OrderedStatuses.Count - 1;
+        => status == OrderItemStatus.Cancelled || IndexOf(Normalize(status)) == OrderedStatuses.Count - 1;
 
     private static int IndexOf(OrderItemStatus status)
     {
@@ -48,4 +48,12 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
 
         return -1;
     }
+
+    private static OrderItemStatus Normalize(OrderItemStatus status)
+        => status switch
+        {
+            OrderItemStatus.Packaging => OrderItemStatus.Frying,
+            OrderItemStatus.OutForDelivery => OrderItemStatus.ReadyForPickup,
+            _ => status
+        };
 }
