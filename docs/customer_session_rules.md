@@ -1,5 +1,10 @@
 # Regras de negócio para `CustomerSession`
 
+## Qual é a finalidade da `CustomerSession`
+- Cada sessão representa uma visita ativa de um cliente ao balcão. O registro guarda o nome exibido e a data de criação, além de manter a relação com todos os pedidos feitos naquela visita.【F:api/StandManager/Entities/CustomerSession.cs†L5-L15】
+- O backend usa a sessão como chave para agrupar pedidos ativos exibidos no painel da cozinha e no autoatendimento, garantindo que todos os itens daquele cliente apareçam juntos mesmo que ele faça pedidos em momentos diferentes.【F:api/StandManager/Application/Orders/Services/OrderService.cs†L200-L231】
+- Consultas de histórico e cancelamento também dependem da sessão para assegurar que apenas o próprio cliente consiga acompanhar ou desfazer pedidos vinculados à sua visita.【F:api/StandManager/Application/Orders/Services/OrderService.cs†L317-L376】【F:api/StandManager/Application/Orders/Services/OrderService.cs†L446-L485】
+
 ## Como o `customerSessionId` chega à API
 - O frontend de Autoatendimento grava o identificador da sessão do cliente em cache local (por exemplo, `localStorage`).
 - A cada tentativa de criação de pedido, esse identificador é enviado de volta para o backend, permitindo que pedidos subsequentes sejam vinculados à mesma sessão quando ela já existe.
