@@ -2,12 +2,13 @@
   "compilerOptions": {
     "composite": true,
     "module": "ESNext",
-    "moduleResolution": "Node",
+    "moduleResolution": "Bundler",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "lib": ["ES2020"]
+    "lib": ["ESNext"],
+    "types": ["node"]
   },
   "include": ["vite.config.ts"]
 }
