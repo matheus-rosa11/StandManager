@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { createOrder } from '../api/orders';
+import { CreateOrderInput, CreateOrderResult, createOrder } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
 import { useI18n, useTranslation } from '../i18n';
@@ -10,6 +10,10 @@ const POLLING_INTERVAL_MS = 6000;
 const SESSION_STORAGE_KEY = 'stand-manager.customer-session-id';
 
 type CartMap = Record<string, number>;
+
+const isCustomerSessionNotFoundError = (error: HttpError): boolean => {
+  return error.errors?.CustomerSessionId?.some((value) => value === 'errors.order.customer_session_not_found') ?? false;
+};
 
 const CustomerOrder = () => {
   const loader = useCallback((signal: AbortSignal) => fetchPastelFlavors(signal), []);
@@ -61,6 +65,27 @@ const CustomerOrder = () => {
     }, 0);
   }, [availableFlavors, cart]);
 
+  const handleOrderSuccess = useCallback(
+    (result: CreateOrderResult, fallbackSessionId?: string) => {
+      setShowSuccessModal(true);
+      setCart({});
+      setCustomerName('');
+
+      const resolvedSessionId = result.customerSessionId ?? fallbackSessionId;
+
+      if (resolvedSessionId) {
+        setSessionId(resolvedSessionId);
+        localStorage.setItem(SESSION_STORAGE_KEY, resolvedSessionId);
+      } else {
+        setSessionId(undefined);
+        localStorage.removeItem(SESSION_STORAGE_KEY);
+      }
+
+      refresh();
+    },
+    [refresh]
+  );
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!isFormValid) {
@@ -68,32 +93,47 @@ const CustomerOrder = () => {
       return;
     }
 
-    try {
-      setIsSubmitting(true);
-      setMessage(null);
-      const payload = {
-        customerName: customerName.trim(),
-        customerSessionId: sessionId,
-        items: Object.entries(cart).map(([flavorId, quantity]) => ({ pastelFlavorId: flavorId, quantity }))
-      };
+    setIsSubmitting(true);
+    setMessage(null);
+    const payload: CreateOrderInput = {
+      customerName: customerName.trim(),
+      customerSessionId: sessionId,
+      items: Object.entries(cart).map(([flavorId, quantity]) => ({ pastelFlavorId: flavorId, quantity }))
+    };
 
-      const result = await createOrder(payload);
-      setShowSuccessModal(true);
-      setCart({});
-      setCustomerName('');
-      const resolvedSessionId = result.customerSessionId ?? sessionId;
-      if (resolvedSessionId) {
-        setSessionId(resolvedSessionId);
-        localStorage.setItem(SESSION_STORAGE_KEY, resolvedSessionId);
+    const submitOrder = async (
+      input: CreateOrderInput,
+      allowRetry = true
+    ): Promise<boolean> => {
+      try {
+        const result = await createOrder(input);
+        handleOrderSuccess(result, input.customerSessionId);
+        return true;
+      } catch (err) {
+        if (
+          allowRetry &&
+          err instanceof HttpError &&
+          input.customerSessionId &&
+          isCustomerSessionNotFoundError(err)
+        ) {
+          localStorage.removeItem(SESSION_STORAGE_KEY);
+          setSessionId(undefined);
+          return submitOrder({ ...input, customerSessionId: undefined }, false);
+        }
+
+        if (err instanceof HttpError) {
+          const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
+          setMessage(validationMessage || err.detail || err.message);
+        } else {
+          setMessage(t('customerOrder.failure'));
+        }
+
+        return false;
       }
-      refresh();
-    } catch (err) {
-      if (err instanceof HttpError) {
-        const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
-        setMessage(validationMessage || err.detail || err.message);
-      } else {
-        setMessage(t('customerOrder.failure'));
-      }
+    };
+
+    try {
+      await submitOrder(payload);
     } finally {
       setIsSubmitting(false);
     }
