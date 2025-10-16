@@ -11,6 +11,9 @@ public interface IPastelFlavorService
 {
     Task<IReadOnlyCollection<PastelFlavor>> GetAllAsync(CancellationToken cancellationToken);
     Task<OperationResult<PastelFlavor>> CreateAsync(string name, string? description, string? imageUrl, int availableQuantity, decimal price, CancellationToken cancellationToken);
+    Task<OperationResult<IReadOnlyCollection<PastelFlavor>>> CreateBatchAsync(
+        IReadOnlyCollection<PastelFlavorCreationModel> flavors,
+        CancellationToken cancellationToken);
     Task<OperationResult> UpdateAsync(Guid id, string name, string? description, string? imageUrl, decimal price, CancellationToken cancellationToken);
     Task<OperationResult> UpdateInventoryAsync(Guid id, int availableQuantity, CancellationToken cancellationToken);
 }

@@ -9,7 +9,7 @@ public sealed record OrderHistoryGroupModel(
     IReadOnlyCollection<OrderHistoryOrderModel> Orders);
 
 public sealed record OrderHistoryOrderModel(
-    Guid OrderId,
+    int OrderId,
     DateTimeOffset CreatedAt,
     decimal TotalAmount,
     IReadOnlyCollection<OrderHistoryItemModel> Items);

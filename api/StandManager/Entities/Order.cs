@@ -4,7 +4,7 @@ namespace StandManager.Entities;
 
 public class Order
 {
-    public Guid Id { get; set; } = Guid.NewGuid();
+    public int Id { get; set; }
 
     [Required]
     public Guid CustomerSessionId { get; set; }

@@ -147,7 +147,10 @@ body {
   box-shadow: none;
 }
 
-input[type='text'] {
+input[type='text'],
+input[type='number'],
+input[type='url'],
+textarea {
   width: 100%;
   padding: 0.75rem 1rem;
   border-radius: 0.75rem;
@@ -155,9 +158,13 @@ input[type='text'] {
   background: var(--color-surface);
   color: var(--color-text);
   transition: border-color 0.2s ease;
+  font: inherit;
 }
 
-input[type='text']:focus {
+input[type='text']:focus,
+input[type='number']:focus,
+input[type='url']:focus,
+textarea:focus {
   outline: none;
   border-color: var(--color-primary);
   box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.2);

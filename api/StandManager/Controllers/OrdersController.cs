@@ -138,9 +138,9 @@ public class OrdersController : LocalizedControllerBase
         }
     }
 
-    [HttpPost("{orderId:guid}/items/{itemId:guid}/advance")]
+    [HttpPost("{orderId:int}/items/{itemId:guid}/advance")]
     [ProducesResponseType(typeof(ActiveOrderItemResponse), StatusCodes.Status200OK)]
-    public async Task<IActionResult> AdvanceItemStatusAsync(Guid orderId, Guid itemId, [FromBody] AdvanceOrderItemRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> AdvanceItemStatusAsync(int orderId, Guid itemId, [FromBody] AdvanceOrderItemRequest request, CancellationToken cancellationToken)
     {
         try
         {
@@ -237,9 +237,9 @@ public class OrdersController : LocalizedControllerBase
         }
     }
 
-    [HttpPost("{orderId:guid}/cancel")]
+    [HttpPost("{orderId:int}/cancel")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
-    public async Task<IActionResult> CancelAsync(Guid orderId, [FromBody] CancelOrderRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> CancelAsync(int orderId, [FromBody] CancelOrderRequest request, CancellationToken cancellationToken)
     {
         try
         {

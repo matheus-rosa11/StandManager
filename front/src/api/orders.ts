@@ -15,7 +15,7 @@ export interface OrderItemSummary {
 }
 
 export interface OrderCreatedResponse {
-  orderId: string;
+  orderId: number;
   customerSessionId: string;
   totalAmount: number;
   items: OrderItemSummary[];
@@ -33,7 +33,7 @@ export interface ActiveOrderItem {
 }
 
 export interface ActiveOrder {
-  orderId: string;
+  orderId: number;
   createdAt: string;
   totalAmount: number;
   items: ActiveOrderItem[];
@@ -58,7 +58,7 @@ export interface CustomerOrderItem {
 }
 
 export interface CustomerOrder {
-  orderId: string;
+  orderId: number;
   createdAt: string;
   totalAmount: number;
   isCancelable: boolean;
@@ -75,7 +75,7 @@ export interface OrderHistoryItem {
 }
 
 export interface OrderHistoryOrder {
-  orderId: string;
+  orderId: number;
   createdAt: string;
   totalAmount: number;
   items: OrderHistoryItem[];
@@ -125,7 +125,7 @@ export async function createOrder(payload: CreateOrderInput, signal?: AbortSigna
 }
 
 export function advanceOrderItemStatus(
-  orderId: string,
+  orderId: number,
   itemId: string,
   targetStatus?: OrderItemStatus,
   signal?: AbortSignal
@@ -141,7 +141,7 @@ export function fetchCustomerOrders(sessionId: string, signal?: AbortSignal): Pr
   return request<CustomerOrder[]>(`/api/Orders/customer/${sessionId}`, { signal });
 }
 
-export function cancelOrder(orderId: string, customerSessionId: string, signal?: AbortSignal): Promise<void> {
+export function cancelOrder(orderId: number, customerSessionId: string, signal?: AbortSignal): Promise<void> {
   return request<void>(`/api/Orders/${orderId}/cancel`, {
     method: 'POST',
     body: JSON.stringify({ customerSessionId }),

@@ -13,7 +13,7 @@ const CustomerOrders = () => {
   const { language } = useI18n();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [cancellingId, setCancellingId] = useState<number | null>(null);
 
   useEffect(() => {
     const stored = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -44,7 +44,7 @@ const CustomerOrders = () => {
     [language]
   );
 
-  const handleCancel = async (orderId: string) => {
+  const handleCancel = async (orderId: number) => {
     if (!sessionId) {
       return;
     }
@@ -102,7 +102,7 @@ const CustomerOrders = () => {
               <header style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    <strong>{t('customerOrders.orderNumber', { order: order.orderId.slice(0, 8) })}</strong>
+                    <strong>{t('customerOrders.orderNumber', { order: order.orderId })}</strong>
                     <small style={{ color: 'var(--color-muted)' }}>
                       {t('customerOrders.createdAt', { time: new Date(order.createdAt).toLocaleString(language) })}
                     </small>
