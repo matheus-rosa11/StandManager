@@ -152,6 +152,9 @@ const CashierDashboard = () => {
                   <header className="pastel-card__header">
                     <strong>{flavor.name}</strong>
                     {flavor.description && <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>}
+                    <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
+                      {currencyFormatter.format(flavor.price)}
+                    </small>
                   </header>
                   {flavor.imageUrl && (
                     <img

@@ -10,6 +10,7 @@ public sealed class OrderWorkflowService : IOrderWorkflowService
         OrderItemStatus.Pending,
         OrderItemStatus.Frying,
         OrderItemStatus.ReadyForPickup,
+        OrderItemStatus.OutForDelivery,
         OrderItemStatus.Completed
     };
 
