@@ -42,6 +42,30 @@ StandManager agora é um monorepo que reúne a API ASP.NET Core e o portal em Re
    dotnet ef database update --project StandManager/StandManager.csproj
    ```
    > Se preferir, a API também aplica as migrações automaticamente na primeira execução.
+
+## Atualizando o banco de dados após novas mudanças
+
+Sempre que um novo commit adiciona migrações Entity Framework, basta executar o comando
+abaixo (dentro da pasta `api/`) para aplicar as alterações no banco configurado em
+`appsettings.json` ou nas variáveis de ambiente:
+
+```bash
+cd api
+dotnet ef database update --project StandManager/StandManager.csproj
+```
+
+> Dica: se o comando `dotnet ef` não estiver disponível, instale a ferramenta global uma
+> única vez com `dotnet tool install --global dotnet-ef` e reinicie o terminal.
+
+Caso prefira aplicar as migrações dentro do container Docker usado no ambiente de produção,
+você pode executar:
+
+```bash
+docker compose run --rm api dotnet ef database update --project StandManager/StandManager.csproj
+```
+
+O comando sincroniza o esquema do banco com o estado mais recente do código, incluindo novas
+tabelas, índices ou colunas adicionadas pelas migrações.
 5. Restaure e execute:
    ```bash
    dotnet run --project StandManager/StandManager.csproj
