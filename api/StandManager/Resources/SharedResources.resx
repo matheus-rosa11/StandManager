@@ -74,6 +74,12 @@
   <data name="errors.flavor.out_of_stock" xml:space="preserve">
     <value>Flavor '{0}' is out of stock for the requested quantity.</value>
   </data>
+  <data name="errors.customer.not_found" xml:space="preserve">
+    <value>The specified customer could not be found.</value>
+  </data>
+  <data name="errors.customer.name_mismatch" xml:space="preserve">
+    <value>The provided name does not match the customer record.</value>
+  </data>
   <data name="errors.order.invalid_status_transition" xml:space="preserve">
     <value>The requested status change is not allowed.</value>
   </data>

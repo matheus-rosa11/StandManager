@@ -13,6 +13,7 @@ type CartMap = Record<string, number>;
 const CashierDashboard = () => {
   const loader = useCallback((signal: AbortSignal) => fetchPastelFlavors(signal), []);
   const { data: flavors, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, []);
+  const [customerIdentifier, setCustomerIdentifier] = useState('');
   const [customerName, setCustomerName] = useState('');
   const [cart, setCart] = useState<CartMap>({});
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -53,11 +54,13 @@ const CashierDashboard = () => {
     }, 0);
   }, [availableFlavors, cart]);
 
-  const isFormValid = customerName.trim().length > 0 && totalItems > 0;
+  const parsedCustomerId = Number(customerIdentifier);
+  const customerId = Number.isInteger(parsedCustomerId) && parsedCustomerId > 0 ? parsedCustomerId : null;
+  const isFormValid = customerId !== null && customerName.trim().length > 0 && totalItems > 0;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isFormValid) {
+    if (!isFormValid || customerId === null) {
       setFeedback(t('cashier.validation'));
       return;
     }
@@ -66,6 +69,7 @@ const CashierDashboard = () => {
       setIsSubmitting(true);
       setFeedback(null);
       const payload = {
+        customerId,
         customerName: customerName.trim(),
         items: Object.entries(cart).map(([flavorId, quantity]) => ({ pastelFlavorId: flavorId, quantity }))
       };
@@ -73,6 +77,7 @@ const CashierDashboard = () => {
       await createOrder(payload);
       setShowSuccessModal(true);
       setFeedback(null);
+      setCustomerIdentifier('');
       setCustomerName('');
       setCart({});
       refresh();
@@ -118,6 +123,24 @@ const CashierDashboard = () => {
       </header>
 
       <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.25rem' }}>
+        <div>
+          <label htmlFor="customerId" className='required' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+            {t('cashier.identifierLabel')}
+          </label>
+          <input
+            id="customerId"
+            type="number"
+            min={1}
+            placeholder={t('cashier.identifierPlaceholder')}
+            value={customerIdentifier}
+            onChange={(event) => setCustomerIdentifier(event.target.value)}
+            required
+          />
+          <small style={{ display: 'block', marginTop: '0.25rem', color: 'var(--color-muted)' }}>
+            {t('cashier.identifierHelper')}
+          </small>
+        </div>
+
         <div>
           <label htmlFor="customerName" className='required' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
             {t('cashier.nameLabel')}

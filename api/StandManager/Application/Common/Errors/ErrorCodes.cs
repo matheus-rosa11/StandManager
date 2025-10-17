@@ -3,7 +3,8 @@ namespace StandManager.Application.Common.Errors;
 public static class ErrorCodes
 {
     public const string CustomerNameRequired = "errors.order.customer_name_required";
-    public const string CustomerSessionNotFound = "errors.order.customer_session_not_found";
+    public const string CustomerNotFound = "errors.customer.not_found";
+    public const string CustomerNameMismatch = "errors.customer.name_mismatch";
     public const string FlavorNameExists = "errors.flavor.name_exists";
     public const string FlavorNameRequired = "errors.flavor.name_required";
     public const string FlavorNotFound = "errors.flavor.not_found";

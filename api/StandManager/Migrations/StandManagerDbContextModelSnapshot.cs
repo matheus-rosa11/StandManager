@@ -22,23 +22,31 @@ namespace StandManager.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("StandManager.Entities.CustomerSession", b =>
+            modelBuilder.Entity("StandManager.Entities.Customer", b =>
                 {
-                    b.Property<Guid>("Id")
+                    b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
+                        .HasColumnType("integer")
+                        .HasAnnotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn);
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<string>("DisplayName")
+                    b.Property<bool>("IsVolunteer")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(120)
                         .HasColumnType("character varying(120)");
 
                     b.HasKey("Id");
 
-                    b.ToTable("CustomerSessions");
+                    b.HasIndex("IsVolunteer", "Name");
+
+                    b.ToTable("Customers");
                 });
 
             modelBuilder.Entity("StandManager.Entities.Order", b =>
@@ -56,8 +64,8 @@ namespace StandManager.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
-                    b.Property<Guid>("CustomerSessionId")
-                        .HasColumnType("uuid");
+                    b.Property<int>("CustomerId")
+                        .HasColumnType("integer");
 
                     b.Property<decimal>("TotalAmount")
                         .ValueGeneratedOnAdd()
@@ -67,7 +75,7 @@ namespace StandManager.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CustomerSessionId");
+                    b.HasIndex("CustomerId");
 
                     b.ToTable("Orders");
                 });
@@ -180,13 +188,13 @@ namespace StandManager.Migrations
 
             modelBuilder.Entity("StandManager.Entities.Order", b =>
                 {
-                    b.HasOne("StandManager.Entities.CustomerSession", "CustomerSession")
+                    b.HasOne("StandManager.Entities.Customer", "Customer")
                         .WithMany("Orders")
-                        .HasForeignKey("CustomerSessionId")
+                        .HasForeignKey("CustomerId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
-                    b.Navigation("CustomerSession");
+                    b.Navigation("Customer");
                 });
 
             modelBuilder.Entity("StandManager.Entities.OrderItem", b =>
@@ -219,7 +227,7 @@ namespace StandManager.Migrations
                     b.Navigation("OrderItem");
                 });
 
-            modelBuilder.Entity("StandManager.Entities.CustomerSession", b =>
+            modelBuilder.Entity("StandManager.Entities.Customer", b =>
                 {
                     b.Navigation("Orders");
                 });

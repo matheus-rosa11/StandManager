@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { fetchOrderHistory } from '../api/orders';
 import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
@@ -10,13 +10,23 @@ const VolunteerHistory = () => {
   const { t } = useTranslation();
   const { language } = useI18n();
 
-  const loader = useCallback((signal: AbortSignal) => fetchOrderHistory(signal), []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const loader = useCallback((signal: AbortSignal) => fetchOrderHistory(debouncedSearch, signal), [debouncedSearch]);
   const { data, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, []);
 
   const groups = useMemo(() => data ?? [], [data]);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
 
-  const toggleGroup = (groupId: string) => {
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timerId);
+  }, [searchTerm]);
+
+  const toggleGroup = (groupId: number) => {
     setExpandedGroup((current) => (current === groupId ? null : groupId));
   };
 
@@ -30,6 +40,13 @@ const VolunteerHistory = () => {
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <h1>{t('volunteerHistory.title')}</h1>
         <p style={{ color: 'var(--color-muted)' }}>{t('volunteerHistory.subtitle')}</p>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={t('volunteerHistory.searchPlaceholder')}
+          style={{ maxWidth: '320px' }}
+        />
         <button className="button" onClick={refresh} disabled={loading}>
           {t('volunteerHistory.refresh')}
         </button>
@@ -43,18 +60,18 @@ const VolunteerHistory = () => {
       ) : (
         <div className="order-grid">
           {groups.map((group) => {
-            const isExpanded = expandedGroup === group.customerSessionId;
+            const isExpanded = expandedGroup === group.customerId;
             const completedCount = group.orders.reduce((acc, order) => {
               return acc + order.items.reduce((itemAcc, item) => itemAcc + item.quantity, 0);
             }, 0);
 
             return (
-              <article key={group.customerSessionId} className="card" style={{ border: '1px solid var(--color-border)', display: 'grid', gap: '1rem' }}>
+              <article key={group.customerId} className="card" style={{ border: '1px solid var(--color-border)', display: 'grid', gap: '1rem' }}>
                 <button
                   type="button"
                   aria-expanded={isExpanded}
-                  aria-controls={`history-group-${group.customerSessionId}`}
-                  onClick={() => toggleGroup(group.customerSessionId)}
+                  aria-controls={`history-group-${group.customerId}`}
+                  onClick={() => toggleGroup(group.customerId)}
                   style={{
                     display: 'flex',
                     justifyContent: 'space-between',
@@ -70,7 +87,7 @@ const VolunteerHistory = () => {
                 >
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                     <strong>{group.customerName}</strong>
-                    <small style={{ color: 'var(--color-muted)' }}>{t('volunteerHistory.session', { sessionId: group.customerSessionId })}</small>
+                    <small style={{ color: 'var(--color-muted)' }}>{t('volunteerHistory.identifier', { id: group.customerId })}</small>
                   </div>
                   <span className="status-badge status-readyforpickup">
                     {t('volunteerHistory.completedItems', { count: completedCount })}
@@ -78,7 +95,7 @@ const VolunteerHistory = () => {
                 </button>
 
                 {isExpanded && (
-                  <div id={`history-group-${group.customerSessionId}`} style={{ display: 'grid', gap: '1rem' }}>
+                  <div id={`history-group-${group.customerId}`} style={{ display: 'grid', gap: '1rem' }}>
                     {group.orders.map((order) => (
                       <section key={order.orderId} className="card" style={{ border: '1px dashed var(--color-border)', display: 'grid', gap: '0.75rem' }}>
                         <header style={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>

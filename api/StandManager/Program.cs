@@ -1,8 +1,12 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
+using StandManager.Application.Customers;
+using StandManager.Application.Customers.Services;
 using StandManager.Application.Orders;
 using StandManager.Application.Orders.Services;
+using StandManager.Application.Reports;
+using StandManager.Application.Reports.Services;
 using StandManager.Application.PastelFlavors;
 using StandManager.Application.PastelFlavors.Services;
 using StandManager.Data;
@@ -32,8 +36,10 @@ namespace StandManager
                 options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
             builder.Services.AddScoped<IPastelFlavorService, PastelFlavorService>();
+            builder.Services.AddScoped<ICustomerService, CustomerService>();
             builder.Services.AddScoped<IOrderWorkflowService, OrderWorkflowService>();
             builder.Services.AddScoped<IOrderService, OrderService>();
+            builder.Services.AddScoped<IReportService, ReportService>();
 
             builder.Services.AddCors(options =>
             {

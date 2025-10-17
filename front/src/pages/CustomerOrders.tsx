@@ -4,33 +4,29 @@ import { HttpError } from '../api/client';
 import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
 import { ORDER_STATUS_LABEL_KEYS, getStatusClass } from '../utils/orderStatus';
+import { useIdentity } from '../contexts/IdentityContext';
 
 const POLLING_INTERVAL_MS = 8000;
-const SESSION_STORAGE_KEY = 'stand-manager.customer-session-id';
 
 const CustomerOrders = () => {
   const { t } = useTranslation();
   const { language } = useI18n();
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [cancellingId, setCancellingId] = useState<number | null>(null);
-
-  useEffect(() => {
-    const stored = localStorage.getItem(SESSION_STORAGE_KEY);
-    setSessionId(stored);
-  }, []);
+  const { state } = useIdentity();
+  const customer = state.role === 'customer' ? state.customer : undefined;
 
   const loader = useCallback(
     (signal: AbortSignal) => {
-      if (!sessionId) {
+      if (!customer) {
         return Promise.resolve([] as CustomerOrder[]);
       }
-      return fetchCustomerOrders(sessionId, signal);
+      return fetchCustomerOrders(customer.id, signal);
     },
-    [sessionId]
+    [customer]
   );
 
-  const { data: orders, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, [sessionId]);
+  const { data: orders, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, [customer?.id]);
   const [orderList, setOrderList] = useState<CustomerOrder[]>([]);
 
   useEffect(() => {
@@ -45,14 +41,14 @@ const CustomerOrders = () => {
   );
 
   const handleCancel = async (orderId: number) => {
-    if (!sessionId) {
+    if (!customer) {
       return;
     }
 
     try {
       setCancellingId(orderId);
       setFeedback(null);
-      await cancelOrder(orderId, sessionId);
+      await cancelOrder(orderId, customer.id);
       setFeedback(t('customerOrders.cancelled'));
       refresh();
     } catch (err) {
@@ -66,12 +62,12 @@ const CustomerOrders = () => {
     }
   };
 
-  if (!sessionId) {
+  if (!customer) {
     return (
       <section className="card" style={{ display: 'grid', gap: '1.5rem' }}>
         <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
           <h1>{t('customerOrders.title')}</h1>
-          <p style={{ color: 'var(--color-muted)' }}>{t('customerOrders.noSession')}</p>
+          <p style={{ color: 'var(--color-muted)' }}>{t('customerOrders.noIdentity')}</p>
         </header>
       </section>
     );
@@ -81,7 +77,9 @@ const CustomerOrders = () => {
     <section className="card" style={{ display: 'grid', gap: '1.5rem' }}>
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <h1>{t('customerOrders.title')}</h1>
-        <small style={{ color: 'var(--color-muted)' }}>{t('customerOrders.sessionLabel', { sessionId })}</small>
+        <small style={{ color: 'var(--color-muted)' }}>
+          {t('customerOrders.identityLabel', { id: customer.id, name: customer.name })}
+        </small>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
           <button className="button" onClick={refresh} disabled={loading}>
             {t('customerOrders.refresh')}

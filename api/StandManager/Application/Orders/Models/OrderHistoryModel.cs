@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace StandManager.Application.Orders.Models;
 
 public sealed record OrderHistoryGroupModel(
-    Guid CustomerSessionId,
+    int CustomerId,
     string CustomerName,
     IReadOnlyCollection<OrderHistoryOrderModel> Orders);
 
