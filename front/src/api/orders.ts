@@ -1,4 +1,4 @@
-import { API_BASE_URL, parseResponse, request } from './client';
+import { request } from './client';
 import { OrderItemStatus } from '../utils/orderStatus';
 
 export interface OrderStatusSnapshot {
@@ -16,7 +16,7 @@ export interface OrderItemSummary {
 
 export interface OrderCreatedResponse {
   orderId: number;
-  customerSessionId: string;
+  customerId: number;
   totalAmount: number;
   items: OrderItemSummary[];
 }
@@ -40,7 +40,7 @@ export interface ActiveOrder {
 }
 
 export interface ActiveOrderGroup {
-  customerSessionId: string;
+  customerId: number;
   customerName: string;
   orders: ActiveOrder[];
 }
@@ -82,7 +82,7 @@ export interface OrderHistoryOrder {
 }
 
 export interface OrderHistoryGroup {
-  customerSessionId: string;
+  customerId: number;
   customerName: string;
   orders: OrderHistoryOrder[];
 }
@@ -94,34 +94,24 @@ export interface CreateOrderItemInput {
 }
 
 export interface CreateOrderInput {
+  customerId: number;
   customerName: string;
-  customerSessionId?: string;
   items: CreateOrderItemInput[];
 }
 
-export function fetchActiveOrders(signal?: AbortSignal): Promise<ActiveOrderGroup[]> {
-  return request<ActiveOrderGroup[]>('/api/Orders/active', { signal });
+export function fetchActiveOrders(search?: string, signal?: AbortSignal): Promise<ActiveOrderGroup[]> {
+  const query = search?.trim()
+    ? `?${new URLSearchParams({ search: search.trim() }).toString()}`
+    : '';
+  return request<ActiveOrderGroup[]>(`/api/Orders/active${query}`, { signal });
 }
 
-export interface CreateOrderResult {
-  data?: OrderCreatedResponse;
-  customerSessionId?: string;
-}
-
-export async function createOrder(payload: CreateOrderInput, signal?: AbortSignal): Promise<CreateOrderResult> {
-  const response = await fetch(`${API_BASE_URL}/api/Orders`, {
+export function createOrder(payload: CreateOrderInput, signal?: AbortSignal): Promise<OrderCreatedResponse> {
+  return request<OrderCreatedResponse>('/api/Orders', {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
     body: JSON.stringify(payload),
     signal
   });
-
-  const data = await parseResponse<OrderCreatedResponse | undefined>(response);
-  const customerSessionId = response.headers.get('x-customer-session-id') ?? undefined;
-
-  return { data: data ?? undefined, customerSessionId: customerSessionId ?? data?.customerSessionId };
 }
 
 export function advanceOrderItemStatus(
@@ -137,18 +127,21 @@ export function advanceOrderItemStatus(
   });
 }
 
-export function fetchCustomerOrders(sessionId: string, signal?: AbortSignal): Promise<CustomerOrder[]> {
-  return request<CustomerOrder[]>(`/api/Orders/customer/${sessionId}`, { signal });
+export function fetchCustomerOrders(customerId: number, signal?: AbortSignal): Promise<CustomerOrder[]> {
+  return request<CustomerOrder[]>(`/api/Orders/customer/${customerId}`, { signal });
 }
 
-export function cancelOrder(orderId: number, customerSessionId: string, signal?: AbortSignal): Promise<void> {
+export function cancelOrder(orderId: number, customerId: number, signal?: AbortSignal): Promise<void> {
   return request<void>(`/api/Orders/${orderId}/cancel`, {
     method: 'POST',
-    body: JSON.stringify({ customerSessionId }),
+    body: JSON.stringify({ customerId }),
     signal
   });
 }
 
-export function fetchOrderHistory(signal?: AbortSignal): Promise<OrderHistoryGroup[]> {
-  return request<OrderHistoryGroup[]>('/api/Orders/history', { signal });
+export function fetchOrderHistory(search?: string, signal?: AbortSignal): Promise<OrderHistoryGroup[]> {
+  const query = search?.trim()
+    ? `?${new URLSearchParams({ search: search.trim() }).toString()}`
+    : '';
+  return request<OrderHistoryGroup[]>(`/api/Orders/history${query}`, { signal });
 }

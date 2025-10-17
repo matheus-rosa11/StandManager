@@ -1,26 +1,23 @@
-# Regras de negócio para `CustomerSession`
+# Fluxo de identificação de clientes
 
-## Qual é a finalidade da `CustomerSession`
-- Cada sessão representa uma visita ativa de um cliente ao balcão. O registro guarda o nome exibido e a data de criação, além de manter a relação com todos os pedidos feitos naquela visita.【F:api/StandManager/Entities/CustomerSession.cs†L5-L15】
-- O backend usa a sessão como chave para agrupar pedidos ativos exibidos no painel da cozinha e no autoatendimento, garantindo que todos os itens daquele cliente apareçam juntos mesmo que ele faça pedidos em momentos diferentes.【F:api/StandManager/Application/Orders/Services/OrderService.cs†L200-L231】
-- Consultas de histórico e cancelamento também dependem da sessão para assegurar que apenas o próprio cliente consiga acompanhar ou desfazer pedidos vinculados à sua visita.【F:api/StandManager/Application/Orders/Services/OrderService.cs†L317-L376】【F:api/StandManager/Application/Orders/Services/OrderService.cs†L446-L485】
+## Por que adotamos números sequenciais
+- Cada pessoa que participa do evento recebe um identificador numérico simples registrado na entidade `Customer`. Isso evita GUIDs difíceis de memorizar e garante que os pedidos possam ser vinculados de forma consistente ao mesmo participante durante todo o dia.
+- O registro guarda nome, data de criação, vínculo com pedidos e se a pessoa atua como voluntária, permitindo separar as telas liberadas para cada perfil.
 
-## Como o `customerSessionId` chega à API
-- O frontend de Autoatendimento grava o identificador da sessão do cliente em cache local (por exemplo, `localStorage`).
-- A cada tentativa de criação de pedido, esse identificador é enviado de volta para o backend, permitindo que pedidos subsequentes sejam vinculados à mesma sessão quando ela já existe.
+## Como o identificador é criado ou confirmado
+1. Assim que alguém acessa a plataforma, a interface pergunta se ela é voluntária. Voluntários não passam pelo cadastro de cliente e recebem acesso direto aos painéis internos.
+2. Quem não é voluntário informa se já possui número. Caso tenha, digita o identificador e confirma o nome exatamente como está na base; divergências bloqueiam o acesso e orientam a buscar ajuda.
+3. Se ainda não possuir número, o sistema solicita o nome completo, registra o cliente e mostra a mensagem “Beleza, você é o cliente número X” junto com o aviso de que o crachá ficará no cabeçalho.
+4. O cabeçalho da aplicação exibe continuamente o nome e o identificador, para que o cliente possa informar esse dado na retirada dos pedidos ou ao conversar com voluntários.
 
-## Por que o identificador pode não existir no banco de dados
-- Sessões são persistidas no banco apenas após a criação do primeiro pedido. Antes disso, o frontend ainda pode armazenar um identificador emitido em uma resposta anterior.
-- O identificador também pode ficar "obsoleto" quando a sessão correspondente foi removida (limpeza administrativa, reset de base, expiração manual, etc.). Nesse caso, o cliente continua enviando o valor em cache, mas o registro já não existe mais no banco.
+## Regras aplicadas pelo backend
+- A API de clientes valida nomes durante confirmações e cria registros sequenciais, persistindo o mesmo identificador para cada pessoa.
+- Os pedidos agora exigem o `customerId` inteiro ao serem criados, garantindo que cada compra fique associada a um cliente válido. Isso vale tanto para o autoatendimento quanto para lançamentos feitos pelos voluntários no caixa.
+- Cancelamentos, históricos e agrupamentos em painéis utilizam o `customerId` como chave, permitindo buscas combinadas por nome ou número.
 
-## Validação antes de persistir dados
-- Quando um `customerSessionId` é enviado, o serviço de pedidos faz uma consulta para garantir que o registro de sessão existe. Se não existir, ele retorna o erro `errors.order.customer_session_not_found` em vez de criar automaticamente uma nova sessão com o mesmo identificador.
-- Essa validação evita inconsistências como pedidos vinculados a sessões inexistentes e protege contra valores forjados vindos do cliente.
-- Somente quando nenhum `customerSessionId` é informado (ou seja, quando o cliente não possui uma sessão válida) é que o backend cria um novo registro `CustomerSession` e o associa ao pedido recém-criado.
+## Como voluntários utilizam o identificador
+- As telas de Pedidos Ativos e Histórico apresentam um filtro único que aceita nome ou número e atualiza os resultados em tempo real enquanto o texto é digitado.
+- O módulo de caixa solicita o número do cliente antes de registrar um novo pedido. A orientação mostrada no formulário reforça que o voluntário deve confirmar o número exibido no cabeçalho do participante.
+- O novo painel de Relatórios usa os identificadores para agrupar métricas, apontando volume de pedidos, faturamento, horários de pico e médias de duração por etapa, facilitando o diagnóstico de gargalos.
 
-## Fluxo esperado após uma falha de sessão
-1. O frontend recebe o erro `customer_session_not_found`.
-2. Ele remove o identificador armazenado em cache.
-3. O próximo pedido é enviado sem o `customerSessionId`, permitindo que o backend crie uma nova sessão e retorne o identificador atualizado ao cliente.
-
-Essa abordagem garante integridade referencial entre pedidos e sessões de clientes, ao mesmo tempo em que permite que a experiência de autoatendimento se recupere automaticamente de identificadores desatualizados.
+Essas regras mantêm o identificador sempre sincronizado entre frontend e backend e simplificam o suporte a participantes que têm pouca familiaridade com tecnologia.

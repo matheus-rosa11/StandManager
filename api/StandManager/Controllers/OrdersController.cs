@@ -42,14 +42,14 @@ public class OrdersController : LocalizedControllerBase
                 .ToList();
 
             var result = await _orderService.CreateOrderAsync(
+                request.CustomerId,
                 request.CustomerName,
-                request.CustomerSessionId,
                 items,
                 cancellationToken);
 
             if (!result.Succeeded)
             {
-                var status = result.Errors.Any(e => e.Code == ErrorCodes.CustomerSessionNotFound || e.Code == ErrorCodes.FlavorNotFound)
+                var status = result.Errors.Any(e => e.Code == ErrorCodes.CustomerNotFound || e.Code == ErrorCodes.FlavorNotFound)
                     ? StatusCodes.Status404NotFound
                     : StatusCodes.Status400BadRequest;
 
@@ -57,11 +57,9 @@ public class OrdersController : LocalizedControllerBase
             }
 
             var payload = result.Value!;
-            Response.Headers["X-Customer-Session-Id"] = payload.CustomerSessionId.ToString();
-
             var response = new OrderCreatedResponse(
                 payload.OrderId,
-                payload.CustomerSessionId,
+                payload.CustomerId,
                 payload.TotalAmount,
                 payload.Items
                     .Select(item => new OrderItemSummary(item.OrderItemId, item.PastelFlavorId, item.Quantity, item.Status, item.UnitPrice))
@@ -95,14 +93,14 @@ public class OrdersController : LocalizedControllerBase
 
     [HttpGet("active")]
     [ProducesResponseType(typeof(IEnumerable<ActiveOrderGroupResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetActiveAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetActiveAsync([FromQuery] string? search, CancellationToken cancellationToken)
     {
         try
         {
-            var result = await _orderService.GetActiveOrdersAsync(cancellationToken);
+            var result = await _orderService.GetActiveOrdersAsync(search, cancellationToken);
             var response = result
                 .Select(group => new ActiveOrderGroupResponse(
-                    group.CustomerSessionId,
+                    group.CustomerId,
                     group.CustomerName,
                     group.Orders.Select(order => new ActiveOrderResponse(
                         order.OrderId,
@@ -190,13 +188,13 @@ public class OrdersController : LocalizedControllerBase
         }
     }
 
-    [HttpGet("customer/{sessionId:guid}")]
+    [HttpGet("customer/{customerId:int}")]
     [ProducesResponseType(typeof(IEnumerable<CustomerOrderResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetByCustomerAsync(Guid sessionId, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetByCustomerAsync(int customerId, CancellationToken cancellationToken)
     {
         try
         {
-            var orders = await _orderService.GetCustomerOrdersAsync(sessionId, cancellationToken);
+            var orders = await _orderService.GetCustomerOrdersAsync(customerId, cancellationToken);
             var response = orders
                 .Select(order => new CustomerOrderResponse(
                     order.OrderId,
@@ -248,7 +246,7 @@ public class OrdersController : LocalizedControllerBase
                 return ValidationProblem(ModelState);
             }
 
-            var result = await _orderService.CancelOrderAsync(orderId, request.CustomerSessionId, cancellationToken);
+            var result = await _orderService.CancelOrderAsync(orderId, request.CustomerId, cancellationToken);
 
             if (!result.Succeeded)
             {
@@ -285,14 +283,14 @@ public class OrdersController : LocalizedControllerBase
 
     [HttpGet("history")]
     [ProducesResponseType(typeof(IEnumerable<OrderHistoryGroupResponse>), StatusCodes.Status200OK)]
-    public async Task<IActionResult> GetHistoryAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetHistoryAsync([FromQuery] string? search, CancellationToken cancellationToken)
     {
         try
         {
-            var history = await _orderService.GetOrderHistoryAsync(cancellationToken);
+            var history = await _orderService.GetOrderHistoryAsync(search, cancellationToken);
             var response = history
                 .Select(group => new OrderHistoryGroupResponse(
-                    group.CustomerSessionId,
+                    group.CustomerId,
                     group.CustomerName,
                     group.Orders
                         .Select(order => new OrderHistoryOrderResponse(

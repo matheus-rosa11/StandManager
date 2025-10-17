@@ -1,37 +1,29 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CreateOrderInput, CreateOrderResult, createOrder } from '../api/orders';
+import { createOrder, CreateOrderInput } from '../api/orders';
 import { fetchPastelFlavors, PastelFlavor } from '../api/pastelFlavors';
 import { HttpError } from '../api/client';
 import { useI18n, useTranslation } from '../i18n';
 import { usePolling } from '../hooks/usePolling';
+import { useIdentity } from '../contexts/IdentityContext';
 
 const POLLING_INTERVAL_MS = 6000;
-const SESSION_STORAGE_KEY = 'stand-manager.customer-session-id';
 
 type CartMap = Record<string, number>;
-
-const isCustomerSessionNotFoundError = (error: HttpError): boolean => {
-  return error.errors?.CustomerSessionId?.some((value) => value === 'errors.order.customer_session_not_found') ?? false;
-};
 
 const CustomerOrder = () => {
   const loader = useCallback((signal: AbortSignal) => fetchPastelFlavors(signal), []);
   const { data: flavors, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, []);
-  const [customerName, setCustomerName] = useState('');
-  const [sessionId, setSessionId] = useState<string | undefined>();
   const [cart, setCart] = useState<CartMap>({});
   const [message, setMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const { t } = useTranslation();
   const { language } = useI18n();
   const navigate = useNavigate();
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const { state } = useIdentity();
 
-  useEffect(() => {
-    const storedSessionId = localStorage.getItem(SESSION_STORAGE_KEY) ?? undefined;
-    setSessionId(storedSessionId || undefined);
-  }, []);
+  const customer = state.role === 'customer' ? state.customer : undefined;
 
   const availableFlavors = useMemo(() => flavors ?? [], [flavors]);
 
@@ -48,7 +40,7 @@ const CustomerOrder = () => {
   };
 
   const totalItems = useMemo(() => Object.values(cart).reduce((acc, value) => acc + value, 0), [cart]);
-  const isFormValid = customerName.trim().length > 0 && totalItems > 0;
+  const isFormValid = customer !== undefined && totalItems > 0;
 
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat(language, { style: 'currency', currency: 'BRL' }),
@@ -65,75 +57,40 @@ const CustomerOrder = () => {
     }, 0);
   }, [availableFlavors, cart]);
 
-  const handleOrderSuccess = useCallback(
-    (result: CreateOrderResult, fallbackSessionId?: string) => {
-      setShowSuccessModal(true);
-      setCart({});
-      setCustomerName('');
-
-      const resolvedSessionId = result.customerSessionId ?? fallbackSessionId;
-
-      if (resolvedSessionId) {
-        setSessionId(resolvedSessionId);
-        localStorage.setItem(SESSION_STORAGE_KEY, resolvedSessionId);
-      } else {
-        setSessionId(undefined);
-        localStorage.removeItem(SESSION_STORAGE_KEY);
-      }
-
-      refresh();
-    },
-    [refresh]
-  );
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isFormValid) {
+
+    if (!customer) {
+      setMessage(t('customerOrder.identityMissing'));
+      return;
+    }
+
+    if (totalItems === 0) {
       setMessage(t('customerOrder.validation'));
       return;
     }
 
     setIsSubmitting(true);
     setMessage(null);
+
     const payload: CreateOrderInput = {
-      customerName: customerName.trim(),
-      customerSessionId: sessionId,
+      customerId: customer.id,
+      customerName: customer.name,
       items: Object.entries(cart).map(([flavorId, quantity]) => ({ pastelFlavorId: flavorId, quantity }))
     };
 
-    const submitOrder = async (
-      input: CreateOrderInput,
-      allowRetry = true
-    ): Promise<boolean> => {
-      try {
-        const result = await createOrder(input);
-        handleOrderSuccess(result, input.customerSessionId);
-        return true;
-      } catch (err) {
-        if (
-          allowRetry &&
-          err instanceof HttpError &&
-          input.customerSessionId &&
-          isCustomerSessionNotFoundError(err)
-        ) {
-          localStorage.removeItem(SESSION_STORAGE_KEY);
-          setSessionId(undefined);
-          return submitOrder({ ...input, customerSessionId: undefined }, false);
-        }
-
-        if (err instanceof HttpError) {
-          const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
-          setMessage(validationMessage || err.detail || err.message);
-        } else {
-          setMessage(t('customerOrder.failure'));
-        }
-
-        return false;
-      }
-    };
-
     try {
-      await submitOrder(payload);
+      await createOrder(payload);
+      setShowSuccessModal(true);
+      setCart({});
+      refresh();
+    } catch (err) {
+      if (err instanceof HttpError) {
+        const validationMessage = Object.values(err.errors ?? {}).flat().join(' ');
+        setMessage(validationMessage || err.detail || err.message);
+      } else {
+        setMessage(t('customerOrder.failure'));
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -167,95 +124,74 @@ const CustomerOrder = () => {
       <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <h1>{t('customerOrder.title')}</h1>
         <p style={{ color: 'var(--color-muted)' }}>{t('customerOrder.subtitle')}</p>
+        {customer && (
+          <small style={{ color: 'var(--color-muted)' }}>
+            {t('customerOrder.customerBadge', { id: customer.id, name: customer.name })}
+          </small>
+        )}
       </header>
 
-      <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
-        <div>
-          <label htmlFor="customerName" className='required' style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
-            {t('customerOrder.nameLabel')}
-          </label>
-          <input
-            id="customerName"
-            type="text"
-            placeholder={t('customerOrder.namePlaceholder')}
-            value={customerName}
-            onChange={(event) => setCustomerName(event.target.value)}
-            required
-          />
-        </div>
+      {!customer ? (
+        <p style={{ color: '#c0392b' }}>{t('customerOrder.identityMissing')}</p>
+      ) : (
+        <form onSubmit={handleSubmit} style={{ display: 'grid', gap: '1.5rem' }}>
+          <div style={{ display: 'grid', gap: '1rem' }}>
+            <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2>{t('customerOrder.availableFlavors')}</h2>
+              <button type="button" className="button" onClick={refresh} disabled={loading}>
+                {t('customerOrder.refresh')}
+              </button>
+            </header>
 
-        <div style={{ display: 'grid', gap: '1rem' }}>
-          <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>{t('customerOrder.availableFlavors')}</h2>
-            <button type="button" className="button" onClick={refresh} disabled={loading}>
-              {t('customerOrder.refresh')}
+            {loading && !flavors && <p>{t('customerOrder.loading')}</p>}
+            {error && <p style={{ color: '#c0392b' }}>{t('customerOrder.error', { message: error.message })}</p>}
+
+            <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+              {availableFlavors.map((flavor) => {
+                const selectedQuantity = cart[flavor.id] ?? 0;
+                return (
+                  <article key={flavor.id} className="card" style={{ border: '1px solid var(--color-border)', display: 'grid', gap: '0.75rem' }}>
+                    <header style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <strong>{flavor.name}</strong>
+                      <small style={{ color: 'var(--color-muted)' }}>{flavor.description}</small>
+                      <small style={{ color: 'var(--color-muted)' }}>
+                        {t('customerOrder.inStock', { quantity: flavor.availableQuantity })}
+                      </small>
+                      <small style={{ color: 'var(--color-muted)' }}>{currencyFormatter.format(flavor.price)}</small>
+                    </header>
+                    <footer style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div className="quantity-input">
+                        <button type="button" onClick={() => handleAdjustQuantity(flavor, -1)} disabled={selectedQuantity === 0}>
+                          −
+                        </button>
+                        <span>{selectedQuantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleAdjustQuantity(flavor, 1)}
+                          disabled={selectedQuantity >= flavor.availableQuantity}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </footer>
+                  </article>
+                );
+              })}
+            </div>
+          </div>
+
+          <footer style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <small>{t('customerOrder.itemsInCart', { count: totalItems })}</small>
+              <strong>{t('customerOrder.totalAmount', { value: currencyFormatter.format(totalAmount) })}</strong>
+            </div>
+            <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
+              {isSubmitting ? t('customerOrder.submitting') : t('customerOrder.submit')}
             </button>
-          </header>
-
-          {loading && !flavors && <p>{t('customerOrder.loading')}</p>}
-          {error && <p style={{ color: '#c0392b' }}>{t('customerOrder.error', { message: error.message })}</p>}
-
-          <div style={{ display: 'grid', gap: '1rem', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
-            {availableFlavors.map((flavor) => {
-              const selectedQuantity = cart[flavor.id] ?? 0;
-              const isOutOfStock = flavor.availableQuantity === 0;
-              return (
-                <article key={flavor.id} className="card pastel-card" style={{ opacity: isOutOfStock ? 0.6 : 1 }}>
-                  <header className="pastel-card__header">
-                    <strong>{flavor.name}</strong>
-                  </header>
-                  {flavor.imageUrl && (
-                    <img
-                      src={flavor.imageUrl}
-                      alt={`Pastel sabor ${flavor.name}`}
-                      className="pastel-card__image"
-                    />
-                  )}
-                  <footer className="pastel-card__footer">
-                    <div className="pastel-card__meta">
-                      <small style={{ fontWeight: 600 }}>{currencyFormatter.format(flavor.price)}</small>
-                      <small>{t('customerOrder.inStock', { quantity: flavor.availableQuantity })}</small>
-                    </div>
-                    <div className="pastel-card__actions">
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => handleAdjustQuantity(flavor, -1)}
-                        disabled={selectedQuantity === 0}
-                      >
-                        -
-                      </button>
-                      <span style={{ minWidth: '2ch', textAlign: 'center', fontWeight: 600 }}>{selectedQuantity}</span>
-                      <button
-                        type="button"
-                        className="button"
-                        onClick={() => handleAdjustQuantity(flavor, 1)}
-                        disabled={isOutOfStock || selectedQuantity >= flavor.availableQuantity}
-                      >
-                        +
-                      </button>
-                    </div>
-                  </footer>
-                </article>
-              );
-            })}
-          </div>
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span>{t('customerOrder.itemsInCart', { count: totalItems })}</span>
-            <small style={{ color: 'var(--color-muted)', fontWeight: 600 }}>
-              {t('customerOrder.totalAmount', { value: currencyFormatter.format(totalAmount) })}
-            </small>
-          </div>
-          <button type="submit" className="button" disabled={!isFormValid || isSubmitting}>
-            {isSubmitting ? t('customerOrder.submitting') : t('customerOrder.submit')}
-          </button>
-        </div>
-
-        {message && <p style={{ color: 'var(--color-muted)' }}>{message}</p>}
-      </form>
+          </footer>
+          {message && <p style={{ color: '#c0392b' }}>{message}</p>}
+        </form>
+      )}
     </section>
   );
 };

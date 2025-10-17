@@ -74,6 +74,12 @@
   <data name="errors.flavor.out_of_stock" xml:space="preserve">
     <value>O sabor "{0}" não possui quantidade disponível suficiente.</value>
   </data>
+  <data name="errors.customer.not_found" xml:space="preserve">
+    <value>Não encontramos um cliente com esse identificador.</value>
+  </data>
+  <data name="errors.customer.name_mismatch" xml:space="preserve">
+    <value>O nome informado não confere com o cadastro do cliente.</value>
+  </data>
   <data name="errors.order.invalid_status_transition" xml:space="preserve">
     <value>A mudança de status solicitada não é permitida.</value>
   </data>

@@ -10,7 +10,7 @@ public class StandManagerDbContext : DbContext
     }
 
     public DbSet<PastelFlavor> PastelFlavors => Set<PastelFlavor>();
-    public DbSet<CustomerSession> CustomerSessions => Set<CustomerSession>();
+    public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Order> Orders => Set<Order>();
     public DbSet<OrderItem> OrderItems => Set<OrderItem>();
     public DbSet<OrderItemStatusHistory> OrderItemStatusHistories => Set<OrderItemStatusHistory>();
@@ -28,17 +28,18 @@ public class StandManagerDbContext : DbContext
             entity.HasIndex(x => x.Name).IsUnique();
         });
 
-        modelBuilder.Entity<CustomerSession>(entity =>
+        modelBuilder.Entity<Customer>(entity =>
         {
-            entity.Property(x => x.DisplayName).IsRequired().HasMaxLength(120);
+            entity.Property(x => x.Name).IsRequired().HasMaxLength(120);
+            entity.HasIndex(x => new { x.IsVolunteer, x.Name });
         });
 
         modelBuilder.Entity<Order>(entity =>
         {
             entity.Property(x => x.CustomerNameSnapshot).IsRequired();
-            entity.HasOne(o => o.CustomerSession)
+            entity.HasOne(o => o.Customer)
                 .WithMany(c => c.Orders)
-                .HasForeignKey(o => o.CustomerSessionId)
+                .HasForeignKey(o => o.CustomerId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

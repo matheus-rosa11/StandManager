@@ -30,20 +30,38 @@ public sealed class OrderService : IOrderService
     }
 
     public async Task<OperationResult<OrderCreationResult>> CreateOrderAsync(
+        int customerId,
         string customerName,
-        Guid? customerSessionId,
         IReadOnlyCollection<OrderItemRequestModel> items,
         CancellationToken cancellationToken)
     {
         if (items.Count == 0)
         {
-            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.OrderMustHaveItems, "Items"));
+            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.OrderMustHaveItems, nameof(items)));
         }
 
         var normalizedName = customerName.Trim();
         if (string.IsNullOrWhiteSpace(normalizedName))
         {
-            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.CustomerNameRequired, "CustomerName"));
+            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.CustomerNameRequired, nameof(customerName)));
+        }
+
+        var customer = await _dbContext.Customers
+            .FirstOrDefaultAsync(c => c.Id == customerId && !c.IsVolunteer, cancellationToken);
+
+        if (customer is null)
+        {
+            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.CustomerNotFound, nameof(customerId)));
+        }
+
+        if (!string.Equals(customer.Name, normalizedName, StringComparison.OrdinalIgnoreCase))
+        {
+            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.CustomerNameMismatch, nameof(customerName)));
+        }
+
+        if (!string.Equals(customer.Name, normalizedName, StringComparison.Ordinal))
+        {
+            customer.Name = normalizedName;
         }
 
         var groupedItems = items
@@ -63,7 +81,7 @@ public sealed class OrderService : IOrderService
 
         if (flavors.Count != flavorIds.Count)
         {
-            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.FlavorNotFound, "Items"));
+            return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.FlavorNotFound, nameof(items)));
         }
 
         var stockErrors = new List<OperationError>();
@@ -72,7 +90,7 @@ public sealed class OrderService : IOrderService
             var flavor = flavors[group.FlavorId];
             if (flavor.AvailableQuantity < group.Quantity)
             {
-                stockErrors.Add(new OperationError(ErrorCodes.FlavorOutOfStock, "Items", flavor.Name));
+                stockErrors.Add(new OperationError(ErrorCodes.FlavorOutOfStock, nameof(items), flavor.Name));
             }
         }
 
@@ -81,37 +99,11 @@ public sealed class OrderService : IOrderService
             return OperationResult<OrderCreationResult>.Failure(stockErrors);
         }
 
-        CustomerSession? session = null;
-        if (customerSessionId.HasValue)
-        {
-            session = await _dbContext.CustomerSessions
-                .FirstOrDefaultAsync(s => s.Id == customerSessionId.Value, cancellationToken);
-
-            if (session is null)
-            {
-                return OperationResult<OrderCreationResult>.Failure(new OperationError(ErrorCodes.CustomerSessionNotFound, "CustomerSessionId"));
-            }
-        }
-
         await using var transaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
-
-        if (session is null)
-        {
-            session = new CustomerSession
-            {
-                DisplayName = normalizedName
-            };
-
-            _dbContext.CustomerSessions.Add(session);
-        }
-        else if (!string.Equals(session.DisplayName, normalizedName, StringComparison.Ordinal))
-        {
-            session.DisplayName = normalizedName;
-        }
 
         var order = new Order
         {
-            CustomerSession = session,
+            CustomerId = customer.Id,
             CustomerNameSnapshot = normalizedName
         };
 
@@ -155,11 +147,15 @@ public sealed class OrderService : IOrderService
         await _dbContext.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        _logger.LogInformation("Order {OrderId} created for session {SessionId} ({CustomerName})", order.Id, session.Id, session.DisplayName);
+        _logger.LogInformation(
+            "Order {OrderId} created for customer {CustomerId} ({CustomerName})",
+            order.Id,
+            customer.Id,
+            customer.Name);
 
         var result = new OrderCreationResult(
             order.Id,
-            session.Id,
+            customer.Id,
             order.TotalAmount,
             order.Items
                 .Select(item => new OrderItemSummaryModel(
@@ -173,19 +169,32 @@ public sealed class OrderService : IOrderService
         return OperationResult<OrderCreationResult>.Success(result);
     }
 
-    public async Task<IReadOnlyCollection<ActiveOrderGroupModel>> GetActiveOrdersAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<ActiveOrderGroupModel>> GetActiveOrdersAsync(string? search, CancellationToken cancellationToken)
     {
-        var orders = await _dbContext.Orders
+        var query = _dbContext.Orders
             .AsNoTracking()
             .Where(order => order.Items.Any(item =>
                 item.Status != OrderItemStatus.Completed &&
                 item.Status != OrderItemStatus.Cancelled &&
-                item.Status != OrderItemStatus.OutForDelivery))
+                item.Status != OrderItemStatus.OutForDelivery));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var trimmed = search.Trim();
+            var like = $"%{trimmed}%";
+            query = query.Where(order =>
+                EF.Functions.ILike(order.Customer.Name, like) ||
+                EF.Functions.ILike(order.CustomerId.ToString(), like));
+        }
+
+        var orders = await query
+            .OrderBy(order => order.CustomerId)
+            .ThenBy(order => order.CreatedAt)
             .Select(order => new
             {
+                order.CustomerId,
+                CustomerName = order.Customer.Name,
                 order.Id,
-                order.CustomerSessionId,
-                CustomerName = order.CustomerSession.DisplayName,
                 order.CreatedAt,
                 order.TotalAmount,
                 Items = order.Items
@@ -198,7 +207,7 @@ public sealed class OrderService : IOrderService
                     {
                         item.Id,
                         item.PastelFlavorId,
-                        FlavorName = item.PastelFlavor.Name,
+                        item.PastelFlavor.Name,
                         item.Quantity,
                         item.UnitPrice,
                         item.Status,
@@ -207,30 +216,30 @@ public sealed class OrderService : IOrderService
                     })
                     .ToList()
             })
-            .OrderBy(order => order.CreatedAt)
             .ToListAsync(cancellationToken);
 
         var grouped = orders
-            .GroupBy(order => new { order.CustomerSessionId, order.CustomerName })
+            .GroupBy(order => new { order.CustomerId, order.CustomerName })
             .Select(group => new ActiveOrderGroupModel(
-                group.Key.CustomerSessionId,
+                group.Key.CustomerId,
                 group.Key.CustomerName,
                 group.Select(order => new ActiveOrderModel(
                     order.Id,
                     order.CreatedAt,
                     order.TotalAmount,
-                    order.Items.Select(item => new ActiveOrderItemModel(
-                        item.Id,
-                        item.PastelFlavorId,
-                        item.FlavorName,
-                        item.Quantity,
-                        item.UnitPrice,
-                        NormalizeStatus(item.Status),
-                        item.CreatedAt,
-                        item.LastUpdatedAt
-                    )).ToList()
-                )).ToList()
-            ))
+                    order.Items
+                        .Select(item => new ActiveOrderItemModel(
+                            item.Id,
+                            item.PastelFlavorId,
+                            item.Name,
+                            item.Quantity,
+                            item.UnitPrice,
+                            NormalizeStatus(item.Status),
+                            item.CreatedAt,
+                            item.LastUpdatedAt))
+                        .ToList()))
+                .ToList()))
+            .OrderBy(group => group.CustomerId)
             .ToList();
 
         return grouped;
@@ -242,54 +251,49 @@ public sealed class OrderService : IOrderService
         OrderItemStatus? targetStatus,
         CancellationToken cancellationToken)
     {
-        var item = await _dbContext.OrderItems
-            .Include(orderItem => orderItem.Order)
-                .ThenInclude(order => order.CustomerSession)
-            .Include(orderItem => orderItem.PastelFlavor)
-            .FirstOrDefaultAsync(orderItem => orderItem.Id == orderItemId && orderItem.OrderId == orderId, cancellationToken);
+        var order = await _dbContext.Orders
+            .Include(o => o.Items)
+            .ThenInclude(i => i.PastelFlavor)
+            .Include(o => o.Items)
+            .ThenInclude(i => i.StatusHistory)
+            .FirstOrDefaultAsync(o => o.Id == orderId, cancellationToken);
 
+        if (order is null)
+        {
+            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderNotFound, nameof(orderId)));
+        }
+
+        var item = order.Items.FirstOrDefault(i => i.Id == orderItemId);
         if (item is null)
         {
-            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemNotFound));
+            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemNotFound, nameof(orderItemId)));
         }
 
-        if (item.Status == OrderItemStatus.Completed || item.Status == OrderItemStatus.Cancelled)
+        var normalizedCurrent = NormalizeStatus(item.Status);
+        if (_orderWorkflowService.IsFinalStatus(normalizedCurrent))
         {
-            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemAlreadyCompleted, "TargetStatus"));
+            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemAlreadyCompleted, nameof(targetStatus)));
         }
 
-        OrderItemStatus resolvedTarget;
-        if (targetStatus.HasValue)
+        var resolvedTarget = targetStatus ?? _orderWorkflowService.GetNextStatus(normalizedCurrent);
+        if (resolvedTarget is null)
         {
-            resolvedTarget = targetStatus.Value;
-            if (resolvedTarget == OrderItemStatus.Cancelled)
-            {
-                return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.InvalidStatusTransition, "TargetStatus"));
-            }
-            if (!_orderWorkflowService.IsValidForwardTransition(item.Status, resolvedTarget) || resolvedTarget == item.Status)
-            {
-                return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.InvalidStatusTransition, "TargetStatus"));
-            }
+            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemAlreadyAtFinalStage, nameof(targetStatus)));
         }
-        else
-        {
-            var next = _orderWorkflowService.GetNextStatus(item.Status);
-            if (!next.HasValue)
-            {
-                return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.OrderItemAlreadyAtFinalStage, "TargetStatus"));
-            }
 
-            resolvedTarget = next.Value;
+        if (!_orderWorkflowService.IsValidForwardTransition(normalizedCurrent, resolvedTarget.Value))
+        {
+            return OperationResult<ActiveOrderItemModel>.Failure(new OperationError(ErrorCodes.InvalidStatusTransition, nameof(targetStatus)));
         }
 
         var changeTime = DateTimeOffset.UtcNow;
-        item.Status = resolvedTarget;
+        item.Status = resolvedTarget.Value;
         item.LastUpdatedAt = changeTime;
 
         _dbContext.OrderItemStatusHistories.Add(new OrderItemStatusHistory
         {
             OrderItemId = item.Id,
-            Status = resolvedTarget,
+            Status = resolvedTarget.Value,
             ChangedAt = changeTime
         });
 
@@ -314,11 +318,11 @@ public sealed class OrderService : IOrderService
         return OperationResult<ActiveOrderItemModel>.Success(response);
     }
 
-    public async Task<IReadOnlyCollection<CustomerOrderModel>> GetCustomerOrdersAsync(Guid customerSessionId, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<CustomerOrderModel>> GetCustomerOrdersAsync(int customerId, CancellationToken cancellationToken)
     {
         var orders = await _dbContext.Orders
             .AsNoTracking()
-            .Where(order => order.CustomerSessionId == customerSessionId)
+            .Where(order => order.CustomerId == customerId)
             .OrderByDescending(order => order.CreatedAt)
             .Select(order => new
             {
@@ -370,26 +374,36 @@ public sealed class OrderService : IOrderService
                             history
                         );
                     })
-                    .ToList()
-            ))
+                    .ToList()))
             .ToList();
 
         return response;
     }
 
-    public async Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(string? search, CancellationToken cancellationToken)
     {
-        var orders = await _dbContext.Orders
+        var query = _dbContext.Orders
             .AsNoTracking()
             .Where(order => order.Items.Any(item =>
                 item.Status == OrderItemStatus.Completed ||
-                item.Status == OrderItemStatus.OutForDelivery))
+                item.Status == OrderItemStatus.OutForDelivery));
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var trimmed = search.Trim();
+            var like = $"%{trimmed}%";
+            query = query.Where(order =>
+                EF.Functions.ILike(order.Customer.Name, like) ||
+                EF.Functions.ILike(order.CustomerId.ToString(), like));
+        }
+
+        var orders = await query
             .OrderByDescending(order => order.CreatedAt)
             .Select(order => new
             {
+                order.CustomerId,
+                CustomerName = order.Customer.Name,
                 order.Id,
-                order.CustomerSessionId,
-                CustomerName = order.CustomerSession.DisplayName,
                 order.CreatedAt,
                 order.TotalAmount,
                 Items = order.Items
@@ -398,7 +412,7 @@ public sealed class OrderService : IOrderService
                     {
                         item.Id,
                         item.PastelFlavorId,
-                        FlavorName = item.PastelFlavor.Name,
+                        item.PastelFlavor.Name,
                         item.Quantity,
                         item.UnitPrice,
                         History = item.StatusHistory
@@ -411,77 +425,66 @@ public sealed class OrderService : IOrderService
             .ToListAsync(cancellationToken);
 
         var grouped = orders
-            .GroupBy(order => new { order.CustomerSessionId, order.CustomerName })
+            .GroupBy(order => new { order.CustomerId, order.CustomerName })
             .Select(group => new OrderHistoryGroupModel(
-                group.Key.CustomerSessionId,
+                group.Key.CustomerId,
                 group.Key.CustomerName,
                 group.Select(order => new OrderHistoryOrderModel(
                     order.Id,
                     order.CreatedAt,
                     order.TotalAmount,
                     order.Items
-                        .Select(item =>
-                        {
-                            var history = NormalizeHistory(item.History
-                                .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt)));
-
-                            return new OrderHistoryItemModel(
-                                item.Id,
-                                item.PastelFlavorId,
-                                item.FlavorName,
-                                item.Quantity,
-                                item.UnitPrice,
-                                history
-                            );
-                        })
-                        .ToList()
-                ))
-                .ToList()
-            ))
+                        .Select(item => new OrderHistoryItemModel(
+                            item.Id,
+                            item.PastelFlavorId,
+                            item.Name,
+                            item.Quantity,
+                            item.UnitPrice,
+                            NormalizeHistory(item.History
+                                .Select(history => new OrderStatusSnapshotModel(history.Status, history.ChangedAt))))
+                        .ToList()))
+                .ToList()))
+            .OrderByDescending(group => group.Orders.Max(o => o.CreatedAt))
             .ToList();
 
         return grouped;
     }
 
-    public async Task<OperationResult> CancelOrderAsync(int orderId, Guid customerSessionId, CancellationToken cancellationToken)
+    public async Task<OperationResult> CancelOrderAsync(int orderId, int customerId, CancellationToken cancellationToken)
     {
         var order = await _dbContext.Orders
             .Include(o => o.Items)
-                .ThenInclude(item => item.PastelFlavor)
-            .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerSessionId == customerSessionId, cancellationToken);
+            .FirstOrDefaultAsync(o => o.Id == orderId && o.CustomerId == customerId, cancellationToken);
 
         if (order is null)
         {
-            return OperationResult.Failure(new OperationError(ErrorCodes.OrderNotFound, "OrderId"));
+            return OperationResult.Failure(new OperationError(ErrorCodes.OrderNotFound, nameof(orderId)));
         }
 
-        if (order.Items.Any(item => item.Status != OrderItemStatus.Pending))
+        if (!order.Items.All(item => item.Status == OrderItemStatus.Pending))
         {
-            return OperationResult.Failure(new OperationError(ErrorCodes.OrderCannotBeCancelled, "OrderId"));
+            return OperationResult.Failure(new OperationError(ErrorCodes.OrderCannotBeCancelled, nameof(orderId)));
         }
-
-        var changeTime = DateTimeOffset.UtcNow;
 
         foreach (var item in order.Items)
         {
             item.Status = OrderItemStatus.Cancelled;
-            item.LastUpdatedAt = changeTime;
+            item.LastUpdatedAt = DateTimeOffset.UtcNow;
+
             _dbContext.OrderItemStatusHistories.Add(new OrderItemStatusHistory
             {
                 OrderItemId = item.Id,
                 Status = OrderItemStatus.Cancelled,
-                ChangedAt = changeTime
+                ChangedAt = item.LastUpdatedAt.Value
             });
-
-            if (item.PastelFlavor is not null)
-            {
-                item.PastelFlavor.AvailableQuantity += item.Quantity;
-            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
 
-        _logger.LogInformation("Order {OrderId} for session {SessionId} was cancelled", order.Id, order.CustomerSessionId);
+        _logger.LogInformation(
+            "Order {OrderId} cancelled for customer {CustomerId}",
+            order.Id,
+            order.CustomerId);
 
         return OperationResult.Success();
     }
@@ -494,19 +497,11 @@ public sealed class OrderService : IOrderService
             _ => status
         };
 
-    private static IReadOnlyList<OrderStatusSnapshotModel> NormalizeHistory(IEnumerable<OrderStatusSnapshotModel> history)
+    private static IReadOnlyCollection<OrderStatusSnapshotModel> NormalizeHistory(IEnumerable<OrderStatusSnapshotModel> history)
     {
-        var normalized = new List<OrderStatusSnapshotModel>();
-
-        foreach (var entry in history.OrderBy(entry => entry.ChangedAt))
-        {
-            var status = NormalizeStatus(entry.Status);
-            if (normalized.Count == 0 || normalized[^1].Status != status)
-            {
-                normalized.Add(new OrderStatusSnapshotModel(status, entry.ChangedAt));
-            }
-        }
-
-        return normalized;
+        return history
+            .Select(entry => new OrderStatusSnapshotModel(NormalizeStatus(entry.Status), entry.ChangedAt))
+            .OrderBy(entry => entry.ChangedAt)
+            .ToList();
     }
 }

@@ -11,12 +11,12 @@ namespace StandManager.Application.Orders;
 public interface IOrderService
 {
     Task<OperationResult<OrderCreationResult>> CreateOrderAsync(
+        int customerId,
         string customerName,
-        Guid? customerSessionId,
         IReadOnlyCollection<OrderItemRequestModel> items,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyCollection<ActiveOrderGroupModel>> GetActiveOrdersAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<ActiveOrderGroupModel>> GetActiveOrdersAsync(string? search, CancellationToken cancellationToken);
 
     Task<OperationResult<ActiveOrderItemModel>> AdvanceOrderItemStatusAsync(
         int orderId,
@@ -24,9 +24,9 @@ public interface IOrderService
         OrderItemStatus? targetStatus,
         CancellationToken cancellationToken);
 
-    Task<IReadOnlyCollection<CustomerOrderModel>> GetCustomerOrdersAsync(Guid customerSessionId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<CustomerOrderModel>> GetCustomerOrdersAsync(int customerId, CancellationToken cancellationToken);
 
-    Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<OrderHistoryGroupModel>> GetOrderHistoryAsync(string? search, CancellationToken cancellationToken);
 
-    Task<OperationResult> CancelOrderAsync(int orderId, Guid customerSessionId, CancellationToken cancellationToken);
+    Task<OperationResult> CancelOrderAsync(int orderId, int customerId, CancellationToken cancellationToken);
 }

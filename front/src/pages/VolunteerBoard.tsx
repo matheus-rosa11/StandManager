@@ -8,15 +8,25 @@ import { ORDER_STATUS_LABEL_KEYS, describeWorkflowProgress, getStatusClass } fro
 const POLLING_INTERVAL_MS = 5000;
 
 const VolunteerBoard = () => {
-  const loader = useCallback((signal: AbortSignal) => fetchActiveOrders(signal), []);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const loader = useCallback((signal: AbortSignal) => fetchActiveOrders(debouncedSearch, signal), [debouncedSearch]);
   const { t } = useTranslation();
   const { language } = useI18n();
   const { data: orderGroups, loading, error, refresh } = usePolling(loader, POLLING_INTERVAL_MS, []);
-  const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
+  const [expandedGroup, setExpandedGroup] = useState<number | null>(null);
   const [updatingItemId, setUpdatingItemId] = useState<string | null>(null);
   const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
   const [finalizingItems, setFinalizingItems] = useState<Record<string, number>>({});
   const finalizingTimers = useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const timerId = window.setTimeout(() => {
+      setDebouncedSearch(searchTerm.trim());
+    }, 250);
+
+    return () => window.clearTimeout(timerId);
+  }, [searchTerm]);
 
   useEffect(() => {
     return () => {
@@ -32,7 +42,7 @@ const VolunteerBoard = () => {
     [language]
   );
 
-  const toggleGroup = (groupId: string) => {
+  const toggleGroup = (groupId: number) => {
     setExpandedGroup((current) => (current === groupId ? null : groupId));
   };
 
@@ -92,6 +102,13 @@ const VolunteerBoard = () => {
         <span style={{ color: 'var(--color-muted)', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
           {t('volunteer.pendingItems')}: <strong>{totalPendingItems}</strong>
         </span>
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(event) => setSearchTerm(event.target.value)}
+          placeholder={t('volunteer.searchPlaceholder')}
+          style={{ maxWidth: '320px' }}
+        />
         <button className="button" style={{ alignSelf: 'flex-start' }} onClick={refresh} disabled={loading}>
           {t('volunteer.refresh')}
         </button>
@@ -108,7 +125,7 @@ const VolunteerBoard = () => {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {groupedOrders.map((group) => {
-            const isExpanded = expandedGroup === group.customerSessionId;
+            const isExpanded = expandedGroup === group.customerId;
             const pendingCount = group.orders.reduce((acc, order) => {
               return (
                 acc +
@@ -119,7 +136,7 @@ const VolunteerBoard = () => {
             }, 0);
 
             return (
-              <article key={group.customerSessionId} className="card" style={{ border: '1px solid var(--color-border)' }}>
+              <article key={group.customerId} className="card" style={{ border: '1px solid var(--color-border)' }}>
                 <header
                   style={{
                     display: 'flex',
@@ -127,11 +144,11 @@ const VolunteerBoard = () => {
                     alignItems: 'center',
                     cursor: 'pointer'
                   }}
-                  onClick={() => toggleGroup(group.customerSessionId)}
+                  onClick={() => toggleGroup(group.customerId)}
                 >
                   <div>
                     <h2>{group.customerName}</h2>
-                    <small style={{ color: 'var(--color-muted)' }}>{t('volunteer.session', { sessionId: group.customerSessionId })}</small>
+                    <small style={{ color: 'var(--color-muted)' }}>{t('volunteer.identifier', { id: group.customerId })}</small>
                   </div>
                   <div>
                     <span className="status-badge status-pending">

@@ -7,9 +7,9 @@ public class Order
     public int Id { get; set; }
 
     [Required]
-    public Guid CustomerSessionId { get; set; }
+    public int CustomerId { get; set; }
 
-    public CustomerSession CustomerSession { get; set; } = default!;
+    public Customer Customer { get; set; } = default!;
 
     [Required]
     public string CustomerNameSnapshot { get; set; } = string.Empty;

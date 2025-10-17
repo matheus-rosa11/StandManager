@@ -17,7 +17,9 @@ public class OrderItemRequest
 
 public class CreateOrderRequest
 {
-    public Guid? CustomerSessionId { get; init; }
+    [Required]
+    [Range(1, int.MaxValue)]
+    public int CustomerId { get; init; }
 
     [Required]
     [StringLength(120)]
@@ -27,11 +29,11 @@ public class CreateOrderRequest
     public IReadOnlyCollection<OrderItemRequest> Items { get; init; } = Array.Empty<OrderItemRequest>();
 }
 
-public record OrderCreatedResponse(int OrderId, Guid CustomerSessionId, decimal TotalAmount, IReadOnlyCollection<OrderItemSummary> Items);
+public record OrderCreatedResponse(int OrderId, int CustomerId, decimal TotalAmount, IReadOnlyCollection<OrderItemSummary> Items);
 
 public record OrderItemSummary(Guid OrderItemId, Guid PastelFlavorId, int Quantity, OrderItemStatus Status, decimal UnitPrice);
 
-public record ActiveOrderGroupResponse(Guid CustomerSessionId, string CustomerName, IReadOnlyCollection<ActiveOrderResponse> Orders);
+public record ActiveOrderGroupResponse(int CustomerId, string CustomerName, IReadOnlyCollection<ActiveOrderResponse> Orders);
 
 public record ActiveOrderResponse(int OrderId, DateTimeOffset CreatedAt, decimal TotalAmount, IReadOnlyCollection<ActiveOrderItemResponse> Items);
 
@@ -52,7 +54,7 @@ public record CustomerOrderItemResponse(
 
 public record OrderStatusSnapshotResponse(OrderItemStatus Status, DateTimeOffset ChangedAt);
 
-public record OrderHistoryGroupResponse(Guid CustomerSessionId, string CustomerName, IReadOnlyCollection<OrderHistoryOrderResponse> Orders);
+public record OrderHistoryGroupResponse(int CustomerId, string CustomerName, IReadOnlyCollection<OrderHistoryOrderResponse> Orders);
 
 public record OrderHistoryOrderResponse(int OrderId, DateTimeOffset CreatedAt, decimal TotalAmount, IReadOnlyCollection<OrderHistoryItemResponse> Items);
 
@@ -67,7 +69,8 @@ public record OrderHistoryItemResponse(
 public class CancelOrderRequest
 {
     [Required]
-    public Guid CustomerSessionId { get; init; }
+    [Range(1, int.MaxValue)]
+    public int CustomerId { get; init; }
 }
 
 public record AdvanceOrderItemRequest(OrderItemStatus? TargetStatus);
